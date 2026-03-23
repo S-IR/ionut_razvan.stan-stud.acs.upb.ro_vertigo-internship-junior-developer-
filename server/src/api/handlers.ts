@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, sum, countDistinct, asc, desc, inArray, SQL, } from "drizzle-orm";
 import db from "../db";
 import { usersTable, marketsTable, marketOutcomesTable, betsTable } from "../db/schema";
 import { hashPassword, verifyPassword, type AuthTokenPayload } from "../lib/auth";
@@ -8,20 +8,20 @@ import {
   validateMarketCreation,
   validateBet,
 } from "../lib/validation";
+import { assert } from "../lib/assert";
+import { broadcastNewMarket, SORT_BY_OPTION } from "./markets.routes";
 
 type JwtSigner = {
   sign: (payload: AuthTokenPayload) => Promise<string>;
 };
 
-export async function handleRegister({
-  body,
-  jwt,
-  set,
-}: {
+export async function handleRegister(ctx: {
   body: { username: string; email: string; password: string };
   jwt: JwtSigner;
   set: { status: number };
 }) {
+  const { body, jwt, set } = ctx;
+
   const { username, email, password } = body;
   const errors = validateRegistration(username, email, password);
 
@@ -29,7 +29,6 @@ export async function handleRegister({
     set.status = 400;
     return { errors };
   }
-
   const existingUser = await db.query.usersTable.findFirst({
     where: (users, { or, eq }) => or(eq(users.email, email), eq(users.username, username)),
   });
@@ -41,15 +40,17 @@ export async function handleRegister({
 
   const passwordHash = await hashPassword(password);
 
-  const newUser = await db.insert(usersTable).values({ username, email, passwordHash }).returning();
+  const newUser = await db.insert(usersTable).values({ username, email, passwordHash }).returning()!;
+  assert(newUser.length > 0)
 
-  const token = await jwt.sign({ userId: newUser[0].id });
+  const token = await jwt.sign({ userId: newUser[0]!.id });
 
   set.status = 201;
+
   return {
-    id: newUser[0].id,
-    username: newUser[0].username,
-    email: newUser[0].email,
+    id: newUser[0]!.id,
+    username: newUser[0]!.username,
+    email: newUser[0]!.email,
     token,
   };
 }
@@ -115,12 +116,12 @@ export async function handleCreateMarket({
       createdBy: user.id,
     })
     .returning();
-
+  assert(market.length > 0)
   const outcomeIds = await db
     .insert(marketOutcomesTable)
     .values(
       outcomes.map((title: string, index: number) => ({
-        marketId: market[0].id,
+        marketId: market[0]!.id,
         title,
         position: index,
       })),
@@ -128,68 +129,137 @@ export async function handleCreateMarket({
     .returning();
 
   set.status = 201;
+  const newMarket = market[0]!
+  broadcastNewMarket({
+    ...newMarket,
+    creator: user,
+    outcomes: []
+  })
+
   return {
-    id: market[0].id,
-    title: market[0].title,
-    description: market[0].description,
-    status: market[0].status,
+    id: market[0]!.id,
+    title: market[0]!.title,
+    description: market[0]!.description,
+    status: market[0]!.status,
     outcomes: outcomeIds,
   };
 }
+const MARKETS_DISPLAYED_PER_PAGE = 20
 
-export async function handleListMarkets({ query }: { query: { status?: string } }) {
-  const statusFilter = query.status || "active";
+export async function handleListMarkets({ query }: { query: { status?: string, page: number, sort: SORT_BY_OPTION[] } }) {
+  const statusFilter: "active" | "resolved" =
+    query.status === "resolved" ? "resolved" : "active";
 
-  const markets = await db.query.marketsTable.findMany({
-    where: eq(marketsTable.status, statusFilter),
-    with: {
-      creator: {
-        columns: { username: true },
-      },
-      outcomes: {
-        orderBy: (outcomes, { asc }) => asc(outcomes.position),
-      },
-    },
-  });
+  let hasDateAsc = false;
+  let hasDateDesc = false;
+  let hasNumPartAsc = false;
+  let hasNumPartDesc = false;
+  let hasTotalBetAsc = false;
+  let hasTotalBetDesc = false;
 
-  const enrichedMarkets = await Promise.all(
-    markets.map(async (market) => {
-      const betsPerOutcome = await Promise.all(
-        market.outcomes.map(async (outcome) => {
-          const totalBets = await db
-            .select()
-            .from(betsTable)
-            .where(eq(betsTable.outcomeId, outcome.id));
+  for (const opt of query.sort) {
+    switch (opt) {
+      case SORT_BY_OPTION.DateAsc: hasDateAsc = true; break;
+      case SORT_BY_OPTION.DateDesc: hasDateDesc = true; break;
+      case SORT_BY_OPTION.NumOfParticipantsAsc: hasNumPartAsc = true; break;
+      case SORT_BY_OPTION.NumOfParticipantsDesc: hasNumPartDesc = true; break;
+      case SORT_BY_OPTION.TotalBetSizeAsc: hasTotalBetAsc = true; break;
+      case SORT_BY_OPTION.TotalBetSizeDesc: hasTotalBetDesc = true; break;
+    }
+  }
 
-          const totalAmount = totalBets.reduce((sum, bet) => sum + bet.amount, 0);
-          return { outcomeId: outcome.id, totalBets: totalAmount };
-        }),
-      );
+  assert(!(hasDateAsc && hasDateDesc), "Date sort conflict");
+  assert(!(hasNumPartAsc && hasNumPartDesc), "Participants sort conflict");
+  assert(!(hasTotalBetAsc && hasTotalBetDesc), "Total bet size sort conflict");
 
-      const totalMarketBets = betsPerOutcome.reduce((sum, b) => sum + b.totalBets, 0);
+  const orderBy: SQL[] = [];
+  if (hasDateAsc) orderBy.push(asc(marketsTable.createdAt));
+  if (hasDateDesc) orderBy.push(desc(marketsTable.createdAt));
+  if (hasTotalBetAsc) orderBy.push(asc(sum(betsTable.amount)));
+  if (hasTotalBetDesc) orderBy.push(desc(sum(betsTable.amount)));
+  if (hasNumPartAsc) orderBy.push(asc(countDistinct(betsTable.userId)));
+  if (hasNumPartDesc) orderBy.push(desc(countDistinct(betsTable.userId)));
+  if (orderBy.length === 0) orderBy.push(desc(marketsTable.createdAt));
 
-      return {
-        id: market.id,
-        title: market.title,
-        status: market.status,
-        creator: market.creator?.username,
-        outcomes: market.outcomes.map((outcome) => {
-          const outcomeBets =
-            betsPerOutcome.find((b) => b.outcomeId === outcome.id)?.totalBets || 0;
-          const odds =
-            totalMarketBets > 0 ? Number(((outcomeBets / totalMarketBets) * 100).toFixed(2)) : 0;
+  const markets = await db.select({
+    id: marketsTable.id,
+    title: marketsTable.title,
+    status: marketsTable.status,
+    creatorUsername: usersTable.username,
+    totalBetSize: sum(betsTable.amount),
+    numParticipants: countDistinct(betsTable.userId),
+  })
+    .from(marketsTable)
+    .innerJoin(usersTable, eq(marketsTable.createdBy, usersTable.id))
+    .leftJoin(betsTable, eq(betsTable.marketId, marketsTable.id))
+    .where(eq(marketsTable.status, statusFilter))
+    .groupBy(marketsTable.id)
+    .orderBy(...orderBy as [SQL, ...SQL[]])
+    .limit(MARKETS_DISPLAYED_PER_PAGE)
+    .offset(query.page * MARKETS_DISPLAYED_PER_PAGE)
 
-          return {
-            id: outcome.id,
-            title: outcome.title,
-            odds,
-            totalBets: outcomeBets,
-          };
-        }),
-        totalMarketBets,
-      };
-    }),
-  );
+  const marketIds = markets.map((m) => m.id)
+
+  const outcomes = await db.select({
+    id: marketOutcomesTable.id,
+    marketId: marketOutcomesTable.marketId,
+    title: marketOutcomesTable.title,
+    position: marketOutcomesTable.position,
+    totalBets: sum(betsTable.amount),
+  })
+    .from(marketOutcomesTable)
+    .leftJoin(betsTable, eq(betsTable.outcomeId, marketOutcomesTable.id))
+    .where(inArray(marketOutcomesTable.marketId, marketIds))
+    .groupBy(marketOutcomesTable.id)
+
+
+  // const markets = await db.query.marketsTable.findMany({
+  //   where: eq(marketsTable.status, statusFilter),
+  //   with: {
+  //     creator: {
+  //       columns: { username: true },
+  //     },
+
+  //     outcomes: {
+  //       orderBy: (outcomes, { asc, desc }) => hasTotalBetDesc ? desc(outcomes.position) : asc(outcomes.position),
+  //     },
+  //   },
+  //   orderBy: (markets, { desc, asc }) => hasDateAsc ? asc(markets.createdAt) : desc(markets.createdAt),
+  //   limit: MARKETS_DISPLAYED_PER_PAGE,
+  //   offset: query.page * MARKETS_DISPLAYED_PER_PAGE,
+  // });
+
+  // id: outcome.id,
+  //           title: outcome.title,
+  //           odds,
+  //           totalBets: outcomeBets,
+
+
+  const enrichedMarkets = markets.map((m) => {
+    const currOutcomes = outcomes.filter((o) => o.marketId === m.id);
+    const totalMarketBets = Number(m.totalBetSize) ?? 0
+    return {
+      id: m.id,
+      title: m.title,
+      status: m.status,
+      creator: m.creatorUsername,
+      totalMarketBets,
+      outcomes: currOutcomes.map((o) => ({
+        id: o.id,
+        title: o.title,
+        totalBets: Number(o.totalBets) || 0,
+        odds: totalMarketBets > 0 ? Number(((Number(o.totalBets) / totalMarketBets) * 100).toFixed(2)) : 0,
+      })),
+    };
+
+    // return {
+    //   ...m, outcomes: {
+    //     id: outcome?.id
+    //   title: outcome?.title,
+
+    //   }
+    // }
+  })
 
   return enrichedMarkets;
 }
@@ -306,13 +376,13 @@ export async function handlePlaceBet({
       amount: Number(amount),
     })
     .returning();
-
+  assert(bet.length > 0)
   set.status = 201;
   return {
-    id: bet[0].id,
-    userId: bet[0].userId,
-    marketId: bet[0].marketId,
-    outcomeId: bet[0].outcomeId,
-    amount: bet[0].amount,
+    id: bet[0]!.id,
+    userId: bet[0]!.userId,
+    marketId: bet[0]!.marketId,
+    outcomeId: bet[0]!.outcomeId,
+    amount: bet[0]!.amount,
   };
 }

@@ -34,6 +34,18 @@ export interface Bet {
   createdAt: string;
 }
 
+
+export enum MARKETS_SORT_BY_OPTION {
+  DateAsc = "DateAscending",
+  DateDesc = "DateDescending",
+
+  TotalBetSizeAsc = "TotalBetSizeAscending",
+  TotalBetSizeDesc = "TotalBetSizeDescending",
+
+  NumOfParticipantsAsc = "NumOfParticipantsAscending",
+  NumOfParticipantsDesc = "NumOfParticipantsDescending"
+
+}
 // API Client
 class ApiClient {
   private baseUrl: string;
@@ -41,26 +53,36 @@ class ApiClient {
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
+  private AUTH_TOKEN_LOCAL_STORAGE_LCATION: string = "auth_token"
 
-  private getAuthHeader() {
-    const token = localStorage.getItem("auth_token");
-    if (!token) return {};
-    return { Authorization: `Bearer ${token}` };
-  }
+  // private getAuthHeader() {
+  //   const token = localStorage.getItem("auth_token");
+  //   return token ? { Authorization: `Bearer ${token}` } : {};
+  // }
 
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = {
+
+    const headers = new Headers({
       "Content-Type": "application/json",
-      ...this.getAuthHeader(),
-      ...options.headers,
-    };
+    });
+
+    const token = localStorage.getItem(this.AUTH_TOKEN_LOCAL_STORAGE_LCATION);
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+
+    // Merge incoming headers
+    if (options.headers) {
+      new Headers(options.headers).forEach((value, key) => {
+        headers.set(key, value);
+      });
+    }
 
     const response = await fetch(url, {
       ...options,
       headers,
     });
-
     const data = await response.json();
 
     if (!response.ok) {
@@ -91,8 +113,13 @@ class ApiClient {
   }
 
   // Markets endpoints
-  async listMarkets(status: "active" | "resolved" = "active"): Promise<Market[]> {
-    return this.request(`/api/markets?status=${status}`);
+  async listMarkets(status: "active" | "resolved" = "active", page: number, sortOptions: MARKETS_SORT_BY_OPTION[]): Promise<Market[]> {
+    console.log("sortOptions", sortOptions)
+    const params = new URLSearchParams({ status, page: page.toString() });
+    sortOptions.forEach(opt => params.append("sort", opt));
+    console.log(`/api/markets?${params.toString()}`)
+
+    return this.request(`/api/markets?${params.toString()}`);
   }
 
   async getMarket(id: number): Promise<Market> {

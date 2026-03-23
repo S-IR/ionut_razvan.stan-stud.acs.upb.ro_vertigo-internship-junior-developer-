@@ -2,7 +2,11 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Database } from "bun:sqlite";
 import * as schema from "./schema";
 
-let db: ReturnType<typeof drizzle>;
+import type * as schemaType from "./schema";
+
+let db: ReturnType<typeof drizzle<typeof schemaType>>;
+
+// let db: ReturnType<typeof drizzle>;
 
 export function getDb() {
   if (!db) {

@@ -36,8 +36,8 @@ function LoginPage() {
   });
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex justify-center items-center p-4 min-h-screen">
+      <Card className="shadow-2xl hover:shadow-none w-full max-w-md transition-all duration-300">
         <CardHeader className="space-y-2">
           <CardTitle className="text-3xl">Login</CardTitle>
           <CardDescription>Enter your credentials to access your account</CardDescription>
@@ -64,7 +64,7 @@ function LoginPage() {
                     disabled={isLoading}
                   />
                   {field.state.meta.errors && (
-                    <p className="text-xs text-destructive">{field.state.meta.errors.join(", ")}</p>
+                    <p className="text-destructive text-xs">{field.state.meta.errors.join(", ")}</p>
                   )}
                 </div>
               )}
@@ -84,14 +84,14 @@ function LoginPage() {
                     disabled={isLoading}
                   />
                   {field.state.meta.errors && (
-                    <p className="text-xs text-destructive">{field.state.meta.errors.join(", ")}</p>
+                    <p className="text-destructive text-xs">{field.state.meta.errors.join(", ")}</p>
                   )}
                 </div>
               )}
             </form.Field>
 
             {error && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+              <div className="bg-destructive/10 px-4 py-3 border border-destructive/20 rounded-md text-destructive text-sm">
                 {error}
               </div>
             )}
@@ -101,7 +101,7 @@ function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-6 text-muted-foreground text-sm text-center">
             Don't have an account?{" "}
             <a href="/auth/register" className="font-medium text-primary hover:underline">
               Sign up

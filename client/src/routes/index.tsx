@@ -1,25 +1,39 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { z } from "zod"
 import { useAuth } from "@/lib/auth-context";
-import { api, Market } from "@/lib/api";
+import { api, Market, MARKETS_SORT_BY_OPTION } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { MarketCard } from "@/components/market-card";
 import { useNavigate } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
 
 function DashboardPage() {
   const { isAuthenticated, user } = useAuth();
-  const navigate = useNavigate();
+  const navigate = Route.useNavigate();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"active" | "resolved">("active");
 
+
+  const { page, sort } = Route.useSearch()
+
   const loadMarkets = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await api.listMarkets(status);
+      const data = await api.listMarkets(status, page, sort);
       setMarkets(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load markets");
@@ -29,18 +43,37 @@ function DashboardPage() {
   };
 
   useEffect(() => {
+    const ws = new WebSocket('/api/markets/ws')
+    ws.onmessage = (e) => {
+      const { type } = JSON.parse(e.data)
+      if (type === 'market_added') {
+        loadMarkets()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     loadMarkets();
-  }, [status]);
+  }, [status, page, sort]);
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="flex justify-center items-center bg-[#2c2c2c] min-h-screen align-middle">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4 text-gray-900">Prediction Markets</h1>
-          <p className="text-gray-600 mb-8 text-lg">Create and participate in prediction markets</p>
+          <h1 className="mb-4 font-mali font-bold text-cyan-200 text-8xl">Folley</h1>
+          {/* <img width={64} height={64} src="/folley-logo-transparent.png" /> */}
+          <p className="mb-8 text-gray-200 text-lg">Create and participate in prediction markets</p>
           <div className="space-x-4">
-            <Button onClick={() => navigate({ to: "/auth/login" })}>Login</Button>
-            <Button variant="outline" onClick={() => navigate({ to: "/auth/register" })}>
+            <Button
+              onClick={() => navigate({ to: "/auth/login" })}
+              variant="cyan" size="xs">Login</Button>
+
+            <Button
+              onClick={() => navigate({ to: "/auth/register" })}
+              variant="cyan"
+              size="xs"
+              className="bg-transparent text-emerald-200 hover:text-white"
+            >
               Sign Up
             </Button>
           </div>
@@ -48,15 +81,22 @@ function DashboardPage() {
       </div>
     );
   }
+  function changeSortOptions(selectedSortOption: MARKETS_SORT_BY_OPTION, oppositeSortOption: MARKETS_SORT_BY_OPTION) {
+    const exists = sort.includes(selectedSortOption);
+    let newSort = sort.filter((el) => el !== oppositeSortOption);
+    if (exists) newSort = newSort.filter((el) => el !== selectedSortOption);
+    if (!exists) newSort = [...newSort, selectedSortOption];
 
+    navigate({ search: (prev) => ({ ...prev, sort: newSort }) });
+  }
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="bg-[#2c2c2c] min-h-screen">
+      <div className="mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">Markets</h1>
-            <p className="text-gray-600 mt-2">Welcome back, {user?.username}!</p>
+            <h1 className="font-bold text-gray-900 text-4xl">Markets</h1>
+            <p className="mt-2 text-gray-600">Welcome back, {user?.username}!</p>
           </div>
           <div className="flex items-center gap-4">
             <Button variant="outline" onClick={() => navigate({ to: "/auth/logout" })}>
@@ -67,7 +107,7 @@ function DashboardPage() {
         </div>
 
         {/* Filters */}
-        <div className="mb-6 flex gap-4">
+        <div className="flex gap-4 mb-6">
           <Button
             variant={status === "active" ? "default" : "outline"}
             onClick={() => setStatus("active")}
@@ -83,11 +123,66 @@ function DashboardPage() {
           <Button variant="outline" onClick={loadMarkets} disabled={isLoading}>
             {isLoading ? "Refreshing..." : "Refresh"}
           </Button>
+
+          <DropdownMenu >
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">Sort By</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="flex w-auto! max-w-none!">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Created At Date</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.DateAsc, MARKETS_SORT_BY_OPTION.DateDesc)}
+                  className={sort.includes(MARKETS_SORT_BY_OPTION.DateAsc) ? "bg-accent" : ""}
+                >
+                  Ascending
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.DateDesc, MARKETS_SORT_BY_OPTION.DateAsc)}
+                  className={sort.includes(MARKETS_SORT_BY_OPTION.DateDesc) ? "bg-accent" : ""}
+                >
+                  Descending
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Total Bet Size</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.TotalBetSizeAsc, MARKETS_SORT_BY_OPTION.TotalBetSizeDesc)}
+                  className={sort.includes(MARKETS_SORT_BY_OPTION.TotalBetSizeAsc) ? "bg-accent" : ""}
+                >
+                  Ascending
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.TotalBetSizeDesc, MARKETS_SORT_BY_OPTION.TotalBetSizeAsc)}
+                  className={sort.includes(MARKETS_SORT_BY_OPTION.TotalBetSizeDesc) ? "bg-accent" : ""}
+                >
+                  Descending
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Number of Participants</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc, MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc)}
+                  className={sort.includes(MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc) ? "bg-accent" : ""}
+                >
+                  Ascending
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc, MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc)}
+                  className={sort.includes(MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc) ? "bg-accent" : ""}
+                >
+                  Descending
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Error State */}
         {error && (
-          <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive mb-6">
+          <div className="bg-destructive/10 mb-6 px-4 py-3 border border-destructive/20 rounded-md text-destructive text-sm">
             {error}
           </div>
         )}
@@ -95,13 +190,13 @@ function DashboardPage() {
         {/* Markets Grid */}
         {isLoading ? (
           <Card>
-            <CardContent className="flex items-center justify-center py-12">
+            <CardContent className="flex justify-center items-center py-12">
               <p className="text-muted-foreground">Loading markets...</p>
             </CardContent>
           </Card>
         ) : markets.length === 0 ? (
           <Card>
-            <CardContent className="flex items-center justify-center py-12">
+            <CardContent className="flex justify-center items-center py-12">
               <div className="text-center">
                 <p className="text-muted-foreground text-lg">
                   No {status} markets found. {status === "active" && "Create one to get started!"}
@@ -110,7 +205,7 @@ function DashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="gap-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {markets.map((market) => (
               <MarketCard key={market.id} market={market} />
             ))}
@@ -123,4 +218,8 @@ function DashboardPage() {
 
 export const Route = createFileRoute("/")({
   component: DashboardPage,
+  validateSearch: z.object({
+    page: z.number().default(1),
+    sort: z.array(z.nativeEnum(MARKETS_SORT_BY_OPTION)).default([])
+  })
 });
