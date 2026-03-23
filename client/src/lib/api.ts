@@ -1,6 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4001";
 
-// Types
 export interface Market {
   id: number;
   title: string;
@@ -22,7 +21,6 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  token: string;
 }
 
 export interface Bet {
@@ -34,59 +32,36 @@ export interface Bet {
   createdAt: string;
 }
 
-
 export enum MARKETS_SORT_BY_OPTION {
   DateAsc = "DateAscending",
   DateDesc = "DateDescending",
-
   TotalBetSizeAsc = "TotalBetSizeAscending",
   TotalBetSizeDesc = "TotalBetSizeDescending",
-
   NumOfParticipantsAsc = "NumOfParticipantsAscending",
   NumOfParticipantsDesc = "NumOfParticipantsDescending"
-
 }
-// API Client
+
 class ApiClient {
   private baseUrl: string;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
-  private AUTH_TOKEN_LOCAL_STORAGE_LCATION: string = "auth_token"
-
-  // private getAuthHeader() {
-  //   const token = localStorage.getItem("auth_token");
-  //   return token ? { Authorization: `Bearer ${token}` } : {};
-  // }
 
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
-
-    const headers = new Headers({
-      "Content-Type": "application/json",
-    });
-
-    const token = localStorage.getItem(this.AUTH_TOKEN_LOCAL_STORAGE_LCATION);
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-
-    // Merge incoming headers
-    if (options.headers) {
-      new Headers(options.headers).forEach((value, key) => {
-        headers.set(key, value);
-      });
-    }
-
     const response = await fetch(url, {
       ...options,
-      headers,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
     });
+
     const data = await response.json();
 
     if (!response.ok) {
-      // If there are validation errors, throw them
       if (data.errors && Array.isArray(data.errors)) {
         const errorMessage = data.errors.map((e: any) => `${e.field}: ${e.message}`).join(", ");
         throw new Error(errorMessage);
@@ -97,7 +72,6 @@ class ApiClient {
     return data ?? {};
   }
 
-  // Auth endpoints
   async register(username: string, email: string, password: string): Promise<User> {
     return this.request("/api/auth/register", {
       method: "POST",
@@ -112,16 +86,17 @@ class ApiClient {
     });
   }
 
-  // Markets endpoints
-  async listMarkets(status: "active" | "resolved" = "active", page: number, sortOptions: MARKETS_SORT_BY_OPTION[]): Promise<{
-    totalPages: number,
-    markets: Market[]
-  }> {
-    console.log("sortOptions", sortOptions)
+  async me(): Promise<User> {
+    return this.request("/api/auth/me");
+  }
+
+  async logout(): Promise<void> {
+    return this.request("/api/auth/logout", { method: "POST" });
+  }
+
+  async listMarkets(status: "active" | "resolved" = "active", page: number, sortOptions: MARKETS_SORT_BY_OPTION[]): Promise<{ totalPages: number; markets: Market[] }> {
     const params = new URLSearchParams({ status, page: page.toString() });
     sortOptions.forEach(opt => params.append("sort", opt));
-    console.log(`/api/markets?${params.toString()}`)
-
     return this.request(`/api/markets?${params.toString()}`);
   }
 
@@ -136,7 +111,6 @@ class ApiClient {
     });
   }
 
-  // Bets endpoints
   async placeBet(marketId: number, outcomeId: number, amount: number): Promise<Bet> {
     return this.request(`/api/markets/${marketId}/bets`, {
       method: "POST",

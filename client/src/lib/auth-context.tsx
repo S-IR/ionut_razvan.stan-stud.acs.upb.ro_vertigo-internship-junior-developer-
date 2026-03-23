@@ -1,76 +1,49 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { User } from "./api";
+import { api, User } from "./api";
+import { createServerFn } from "@tanstack/react-start";
+import { getCookie, getRequestHeaders } from "@tanstack/react-start/server";
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export function AuthProvider({ children, initialUser }: { children: React.ReactNode, initialUser: User | null }) {
+  const [user, setUser] = useState<User | null>(initialUser);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const login = (newUser: User) => setUser(newUser);
 
-  useEffect(() => {
-    // Load user from localStorage on mount
-    const token = localStorage.getItem("auth_token");
-    const userData = localStorage.getItem("auth_user");
-
-    if (token && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser({ ...parsedUser, token });
-      } catch {
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("auth_user");
-      }
-    }
-
-    setIsLoading(false);
-  }, []);
-
-  const login = (newUser: User) => {
-    setUser(newUser);
-    localStorage.setItem("auth_token", newUser.token);
-    localStorage.setItem(
-      "auth_user",
-      JSON.stringify({
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-      }),
-    );
-  };
-
-  const logout = () => {
+  const logout = async () => {
+    await api.logout();
     setUser(null);
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        login,
-        logout,
-        isAuthenticated: !!user,
-      }}
-    >
+    <AuthContext.Provider value={{ user, isLoading: false, login, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
 }
-
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
+  if (context === undefined) throw new Error("useAuth must be used within AuthProvider");
   return context;
 }
+
+export const getMeServerFn = createServerFn({ method: "GET" }).handler(async () => {
+  const token = getCookie("auth_token");
+  if (!token) return null;
+
+  const response = await fetch(`${process.env.VITE_API_URL || "http://localhost:4001"}/api/auth/me`, {
+    headers: {
+      Cookie: `auth_token=${token}`,
+    },
+  });
+
+  if (!response.ok) return null;
+  return response.json();
+});
