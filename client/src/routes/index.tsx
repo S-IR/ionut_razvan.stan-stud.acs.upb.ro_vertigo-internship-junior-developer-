@@ -13,19 +13,27 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 function DashboardPage() {
   const { isAuthenticated, user } = useAuth();
+
   const navigate = Route.useNavigate();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"active" | "resolved">("active");
-
+  const [totalPages, setTotalPages] = useState(0)
 
   const { page, sort } = Route.useSearch()
 
@@ -34,7 +42,8 @@ function DashboardPage() {
       setIsLoading(true);
       setError(null);
       const data = await api.listMarkets(status, page, sort);
-      setMarkets(data);
+      setMarkets(data.markets);
+      setTotalPages(data.totalPages)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load markets");
     } finally {
@@ -211,6 +220,54 @@ function DashboardPage() {
             ))}
           </div>
         )}
+        {!isLoading && totalPages > 0 &&
+
+          <Pagination className="mt-4">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => navigate({ search: (prev) => ({ ...prev, page: Math.max(0, page - 1) }) })}
+                />
+              </PaginationItem>
+
+              {/* First page */}
+              <PaginationItem>
+                <PaginationLink isActive={page === 0} onClick={() => navigate({ search: (prev) => ({ ...prev, page: 0 }) })}>
+                  1
+                </PaginationLink>
+              </PaginationItem>
+
+              {page > 3 && <PaginationItem><PaginationEllipsis /></PaginationItem>}
+
+              {Array.from({ length: totalPages }, (_, i) => i)
+                .filter(i => i !== 0 && i !== totalPages - 1 && Math.abs(i - page) <= 2)
+                .map(i => (
+                  <PaginationItem key={i}>
+                    <PaginationLink isActive={page === i} onClick={() => navigate({ search: (prev) => ({ ...prev, page: i }) })}>
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+
+              {page < totalPages - 4 && <PaginationItem><PaginationEllipsis /></PaginationItem>}
+
+              {totalPages > 1 && (
+                <PaginationItem>
+                  <PaginationLink isActive={page === totalPages - 1} onClick={() => navigate({ search: (prev) => ({ ...prev, page: totalPages - 1 }) })}>
+                    {totalPages}
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => navigate({ search: (prev) => ({ ...prev, page: Math.min(totalPages - 1, page + 1) }) })}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+
+        }
       </div>
     </div>
   );
@@ -219,7 +276,20 @@ function DashboardPage() {
 export const Route = createFileRoute("/")({
   component: DashboardPage,
   validateSearch: z.object({
-    page: z.number().default(1),
+    page: z.number().default(0),
     sort: z.array(z.nativeEnum(MARKETS_SORT_BY_OPTION)).default([])
-  })
+  }),
+  // loader: async ({ location }) => {
+  //   const token = localStorage.getItem("auth_token");
+  //   if (!token) return null;
+
+  //   const { page, sort, status } = location.search as {
+  //     page: number;
+  //     sort: MARKETS_SORT_BY_OPTION[];
+  //     status: "active" | "resolved";
+  //   };
+
+  //   const data = await api.listMarkets(status, page, sort);
+  //   return data;
+  // },
 });

@@ -113,7 +113,10 @@ class ApiClient {
   }
 
   // Markets endpoints
-  async listMarkets(status: "active" | "resolved" = "active", page: number, sortOptions: MARKETS_SORT_BY_OPTION[]): Promise<Market[]> {
+  async listMarkets(status: "active" | "resolved" = "active", page: number, sortOptions: MARKETS_SORT_BY_OPTION[]): Promise<{
+    totalPages: number,
+    markets: Market[]
+  }> {
     console.log("sortOptions", sortOptions)
     const params = new URLSearchParams({ status, page: page.toString() });
     sortOptions.forEach(opt => params.append("sort", opt));
