@@ -3,6 +3,7 @@ import { cors } from "@elysiajs/cors";
 import { authRoutes } from "./src/api/auth.routes";
 import { marketRoutes } from "./src/api/markets.routes";
 import { jwtPlugin } from "./src/plugins/jwt";
+import { usersRoutes } from "./src/api/users.routes";
 
 const PORT = Number(process.env.PORT || 4001);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -10,7 +11,8 @@ const HOST = process.env.HOST || "0.0.0.0";
 export const app = new Elysia()
   .use(
     cors({
-      origin: "*",
+      origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
+      credentials: true,
       allowedHeaders: ["Content-Type", "Authorization"],
     }),
   )
@@ -26,7 +28,8 @@ export const app = new Elysia()
     }
   })
   .use(authRoutes)
-  .use(marketRoutes);
+  .use(marketRoutes)
+  .use(usersRoutes);
 
 if (import.meta.main) {
   app.listen({

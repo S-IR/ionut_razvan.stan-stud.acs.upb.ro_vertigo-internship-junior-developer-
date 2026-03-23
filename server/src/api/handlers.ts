@@ -1,4 +1,4 @@
-import { eq, and, sum, countDistinct, asc, desc, inArray, SQL, } from "drizzle-orm";
+import { eq, and, sum, countDistinct, asc, desc, inArray, SQL, count, } from "drizzle-orm";
 import db from "../db";
 import { usersTable, marketsTable, marketOutcomesTable, betsTable } from "../db/schema";
 import { hashPassword, verifyPassword, type AuthTokenPayload } from "../lib/auth";
@@ -10,18 +10,27 @@ import {
 } from "../lib/validation";
 import { assert } from "../lib/assert";
 import { broadcastNewMarket, SORT_BY_OPTION } from "./markets.routes";
+import { type Context } from "elysia";
 
 type JwtSigner = {
-  sign: (payload: AuthTokenPayload) => Promise<string>;
+  sign: (payload: Record<string, string | number>) => Promise<string>;
+  verify: (token?: string) => Promise<Record<string, string | number> | false>;
 };
 
-export async function handleRegister(ctx: {
-  body: { username: string; email: string; password: string };
+type AuthContext<TBody> = Context<{ body: TBody }> & {
   jwt: JwtSigner;
-  set: { status: number };
-}) {
-  const { body, jwt, set } = ctx;
+};
 
+// 7 days
+const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+export async function handleRegister(ctx: AuthContext<{
+  username: string;
+  email: string;
+  password: string;
+}>) {
+  const { body, jwt, set, cookie: { auth_token } } = ctx;
+  // if (!auth_token) return  { errors: [{ field: "auto", message: "User already exists" }] }
+  if (auth_token === undefined) throw new Error("auth token is undefined")
   const { username, email, password } = body;
   const errors = validateRegistration(username, email, password);
 
@@ -45,25 +54,28 @@ export async function handleRegister(ctx: {
 
   const token = await jwt.sign({ userId: newUser[0]!.id });
 
-  set.status = 201;
+  auth_token.set({
+    value: token,
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    maxAge: AUTH_COOKIE_MAX_AGE,
+    path: "/",
+  });
 
-  return {
-    id: newUser[0]!.id,
-    username: newUser[0]!.username,
-    email: newUser[0]!.email,
-    token,
-  };
+  set.status = 201;
+  return { id: newUser[0]!.id, username: newUser[0]!.username, email: newUser[0]!.email };
+
 }
 
-export async function handleLogin({
-  body,
-  jwt,
-  set,
-}: {
-  body: { email: string; password: string };
-  jwt: JwtSigner;
-  set: { status: number };
-}) {
+export async function handleLogin(ctx: AuthContext<{
+  email: string;
+  password: string;
+}>) {
+
+  const { body, jwt, set, cookie: { auth_token } } = ctx;
+  if (auth_token === undefined) throw new Error("auth token is undefined")
+
   const { email, password } = body;
   const errors = validateLogin(email, password);
 
@@ -82,7 +94,14 @@ export async function handleLogin({
   }
 
   const token = await jwt.sign({ userId: user.id });
-
+  auth_token.set({
+    value: token,
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    maxAge: AUTH_COOKIE_MAX_AGE,
+    path: "/",
+  });
   return {
     id: user.id,
     username: user.username,
@@ -234,6 +253,11 @@ export async function handleListMarkets({ query }: { query: { status?: string, p
   //           odds,
   //           totalBets: outcomeBets,
 
+  const totalCount = await db.select({ count: count() })
+    .from(marketsTable)
+    .where(eq(marketsTable.status, statusFilter));
+
+  const totalPages = totalCount !== undefined && totalCount[0] !== undefined ? Math.ceil(totalCount[0].count / MARKETS_DISPLAYED_PER_PAGE) : 0;
 
   const enrichedMarkets = markets.map((m) => {
     const currOutcomes = outcomes.filter((o) => o.marketId === m.id);
@@ -261,7 +285,7 @@ export async function handleListMarkets({ query }: { query: { status?: string, p
     // }
   })
 
-  return enrichedMarkets;
+  return { totalPages, markets: enrichedMarkets };
 }
 
 export async function handleGetMarket({

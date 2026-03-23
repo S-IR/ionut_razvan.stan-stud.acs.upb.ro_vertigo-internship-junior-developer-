@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { authMiddleware } from "../middleware/auth.middleware";
+import { authMiddleware, requireAuth } from "../middleware/auth.middleware";
 import { handleCreateMarket, handleListMarkets, handleGetMarket, handlePlaceBet } from "./handlers";
 import type { ServerWebSocket } from 'bun';   // ← this is the key import
 import { type BuildQueryResult, type DBQueryConfig, type ExtractTablesWithRelations } from "drizzle-orm";
@@ -51,31 +51,23 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       status: t.Optional(t.String()),
       page: t.Number({ default: 1 }),
     }),
-    open(ws) {
-      marketClients.add(ws.raw as ServerWebSocket<MarketWSQuery>);
-    },
-    close(ws) {
-      marketClients.delete(ws.raw as ServerWebSocket<MarketWSQuery>);
-    },
-
+    open(ws) { marketClients.add(ws.raw as ServerWebSocket<MarketWSQuery>); },
+    close(ws) { marketClients.delete(ws.raw as ServerWebSocket<MarketWSQuery>); },
   })
   .get("/", handleListMarkets as any, {
     query: t.Object({
       status: t.Optional(t.String()),
       page: t.Number({ minimum: 0, default: 0 }),
       sort: t.Array(t.Enum(SORT_BY_OPTION), { default: [] }),
-
-
     }),
     beforeHandle({ query, set }) {
       const options = query.sort;
-      if (options.length === 0) return
+      if (options.length === 0) return;
       const conflicts = [
         [SORT_BY_OPTION.DateAsc, SORT_BY_OPTION.DateDesc],
         [SORT_BY_OPTION.TotalBetSizeAsc, SORT_BY_OPTION.TotalBetSizeDesc],
         [SORT_BY_OPTION.NumOfParticipantsAsc, SORT_BY_OPTION.NumOfParticipantsDesc],
       ] as const;
-
       for (const [asc, desc] of conflicts) {
         if (options.includes(asc) && options.includes(desc)) {
           set.status = 422;
@@ -83,38 +75,22 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
         }
       }
     },
-
   })
   .get("/:id", handleGetMarket as any, {
-    params: t.Object({
-      id: t.Numeric(),
+    params: t.Object({ id: t.Numeric() }),
+  })
+  .use(requireAuth)
+  .post("/", handleCreateMarket as any, {
+    body: t.Object({
+      title: t.String(),
+      description: t.Optional(t.String()),
+      outcomes: t.Array(t.String()),
     }),
   })
-  .guard(
-    {
-      beforeHandle({ user, set }) {
-        if (!user) {
-          set.status = 401;
-          return { error: "Unauthorized" };
-        }
-      },
-    },
-    (app) =>
-      app
-        .post("/", handleCreateMarket as any, {
-          body: t.Object({
-            title: t.String(),
-            description: t.Optional(t.String()),
-            outcomes: t.Array(t.String()),
-          }),
-        })
-        .post("/:id/bets", handlePlaceBet as any, {
-          params: t.Object({
-            id: t.Numeric(),
-          }),
-          body: t.Object({
-            outcomeId: t.Number(),
-            amount: t.Number(),
-          }),
-        }),
-  );
+  .post("/:id/bets", handlePlaceBet as any, {
+    params: t.Object({ id: t.Numeric() }),
+    body: t.Object({
+      outcomeId: t.Number(),
+      amount: t.Number(),
+    }),
+  });

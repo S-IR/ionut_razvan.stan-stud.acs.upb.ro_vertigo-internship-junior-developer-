@@ -1,20 +1,36 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { getUserById } from "../lib/auth";
+import { usersTable } from "../db/schema";
+import { eq } from "drizzle-orm";
+import db from "../db";
+import jwt from "@elysiajs/jwt";
 
+// auth.middleware.ts - just reads the cookie, no schema needed here
 export const authMiddleware = new Elysia({ name: "auth-middleware" })
-  .derive(async ({ headers, jwt }) => {
-    const authHeader = headers["authorization"];
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return { user: null };
-    }
-
-    const token = authHeader.substring(7);
-    const payload = await jwt.verify(token);
-    if (!payload) {
-      return { user: null };
-    }
-
-    const user = await getUserById(payload.userId);
-    return { user };
+  .use(jwt({ name: "jwt", secret: process.env.JWT_SECRET! }))
+  .guard({
+    cookie: t.Cookie({
+      auth_token: t.Optional(t.String()),
+    }),
   })
-  .as("plugin");
+  .derive(async ({ jwt, cookie: { auth_token } }) => {
+    console.log("authToken", auth_token.value)
+
+    if (!auth_token.value) return { user: null };
+
+    const payload = await jwt.verify(auth_token.value); // 
+    console.log("payload", payload)
+    if (!payload) return { user: null };
+
+    const user = await getUserById(payload.userId as number);
+    return { user };
+  }).as("scoped")
+
+export const requireAuth = new Elysia()
+  .use(authMiddleware)
+  .onBeforeHandle({ as: "scoped" }, ({ user, set }) => {
+    if (!user) {
+      set.status = 401;
+      return { error: "Unauthorized" };
+    }
+  });
