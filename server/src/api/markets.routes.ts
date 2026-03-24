@@ -1,14 +1,17 @@
 import { Elysia, t } from "elysia";
 import { authMiddleware, requireAuth } from "../middleware/auth.middleware";
-import { handleCreateMarket, handleListMarkets, handleGetMarket, handlePlaceBet } from "./handlers";
+import { handleCreateMarket, handleListMarkets, handleGetMarket, handlePlaceBet, handleCloseMarket } from "./handlers";
 import type { ServerWebSocket } from 'bun';   // ← this is the key import
 import { type BuildQueryResult, type DBQueryConfig, type ExtractTablesWithRelations } from "drizzle-orm";
 import * as schema from "../db/schema";
 
 
-type MarketWSQuery = { status?: string; page: number };
+type MarketsWSQuery = { status?: string; page: number };
+type SingleMarketWSQuery = {}
 
-const marketClients = new Set<ServerWebSocket<MarketWSQuery>>();
+const marketsClients = new Set<ServerWebSocket<MarketsWSQuery>>();
+const LISTEN_TO_ALL_MARKET_UPDATES_ID = -1
+const singleMarketClients = new Map<number, Set<ServerWebSocket<SingleMarketWSQuery>>>();
 
 type TSchema = ExtractTablesWithRelations<typeof schema>;
 
@@ -23,13 +26,28 @@ export type MarketWithRelations = BuildQueryResult<
   }
 >;
 export function broadcastNewMarket(marketData: MarketWithRelations) {
-  const payload = { type: "new-market" };
+  const payload = JSON.stringify({ type: "markets-updated" });
 
-  for (const client of marketClients) {
+  for (const client of marketsClients) {
     if (client.readyState === 1) {
-      client.send(JSON.stringify(payload));
+      client.send(payload);
     }
   }
+}
+export function broadcastSingleMarketUpdate(marketID: number) {
+  const subcribed = singleMarketClients.get(marketID)
+  if (subcribed === undefined || subcribed.size === 0) return
+  const payload = JSON.stringify({ type: "market-updated", id: marketID })
+  for (const sub of subcribed) {
+    sub.send(payload)
+  }
+  const subscribedToAll = singleMarketClients.get(LISTEN_TO_ALL_MARKET_UPDATES_ID)
+  if (subscribedToAll === undefined || subscribedToAll.size === 0) return
+
+  for (const sub of subscribedToAll) {
+    sub.send(payload)
+  }
+
 }
 export enum SORT_BY_OPTION {
   DateAsc = "DateAscending",
@@ -46,13 +64,9 @@ export enum SORT_BY_OPTION {
 
 export const marketRoutes = new Elysia({ prefix: "/api/markets" })
   .use(authMiddleware)
-  .ws('/ws', {
-    query: t.Object({
-      status: t.Optional(t.String()),
-      page: t.Number({ default: 1 }),
-    }),
-    open(ws) { marketClients.add(ws.raw as ServerWebSocket<MarketWSQuery>); },
-    close(ws) { marketClients.delete(ws.raw as ServerWebSocket<MarketWSQuery>); },
+  .ws('/ws/all', {
+    open(ws) { marketsClients.add(ws.raw as ServerWebSocket<MarketsWSQuery>); },
+    close(ws) { marketsClients.delete(ws.raw as ServerWebSocket<MarketsWSQuery>); },
   })
   .get("/", handleListMarkets as any, {
     query: t.Object({
@@ -76,6 +90,43 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       }
     },
   })
+
+  .ws('/ws/:id', {
+    params: t.Object({ id: t.Numeric() }),
+
+    open(ws) {
+      console.log(`opened ws with ${ws.data.params.id}`)
+      const raw = ws.raw as ServerWebSocket<SingleMarketWSQuery>;
+
+      const marketId = Number(ws.data.params.id);
+
+      const existing = singleMarketClients.get(marketId);
+
+      if (existing) {
+        existing.add(raw);
+      } else {
+        singleMarketClients.set(marketId, new Set([raw]));
+      }
+    },
+
+    close(ws) {
+      const raw = ws.raw as ServerWebSocket<SingleMarketWSQuery>;
+
+      const marketId = Number(ws.data.params.id);
+
+      const existing = singleMarketClients.get(marketId);
+      if (!existing) return;
+
+      existing.delete(raw)
+
+      if (existing.size === 0) {
+        singleMarketClients.delete(marketId);
+      } else {
+        singleMarketClients.set(marketId, existing);
+      }
+    },
+  })
+
   .get("/:id", handleGetMarket as any, {
     params: t.Object({ id: t.Numeric() }),
   })
@@ -93,4 +144,12 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       outcomeId: t.Number(),
       amount: t.Number(),
     }),
-  });
+
+
+  })
+  .post("/:id/close", handleCloseMarket as any, {
+    params: t.Object({ id: t.Numeric() }),
+    body: t.Object({
+      resolvedOutcomeId: t.Number(),
+    }),
+  })

@@ -14,12 +14,10 @@ export const authMiddleware = new Elysia({ name: "auth-middleware" })
     }),
   })
   .derive(async ({ jwt, cookie: { auth_token } }) => {
-    console.log("authToken", auth_token.value)
 
     if (!auth_token.value) return { user: null };
 
     const payload = await jwt.verify(auth_token.value); // 
-    console.log("payload", payload)
     if (!payload) return { user: null };
 
     const user = await getUserById(payload.userId as number);

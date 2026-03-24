@@ -9,7 +9,7 @@ import {
   validateBet,
 } from "../lib/validation";
 import { assert } from "../lib/assert";
-import { broadcastNewMarket, SORT_BY_OPTION } from "./markets.routes";
+import { broadcastNewMarket, broadcastSingleMarketUpdate, SORT_BY_OPTION } from "./markets.routes";
 import { type Context } from "elysia";
 
 type JwtSigner = {
@@ -120,6 +120,11 @@ export async function handleCreateMarket({
   user: typeof usersTable.$inferSelect;
 }) {
   const { title, description, outcomes } = body;
+  if (user.role !== "admin") {
+    set.status = 401;
+    return { errors: ["unauthorized to create a market"] }
+
+  }
   const errors = validateMarketCreation(title, description || "", outcomes);
 
   if (errors.length > 0) {
@@ -402,11 +407,57 @@ export async function handlePlaceBet({
     .returning();
   assert(bet.length > 0)
   set.status = 201;
+  broadcastSingleMarketUpdate(market.id)
   return {
     id: bet[0]!.id,
     userId: bet[0]!.userId,
     marketId: bet[0]!.marketId,
     outcomeId: bet[0]!.outcomeId,
     amount: bet[0]!.amount,
+  };
+}
+export async function handleCloseMarket({ body, params, set, user }: {
+  params: { id: number },
+  body: { resolvedOutcomeId: number };
+  set: { status: number };
+  user: typeof usersTable.$inferSelect
+}) {
+  if (user.role !== "admin") {
+    set.status = 401;
+    return { errors: ["unauthorized to close a market"] };
+  }
+  const market = await db.query.marketsTable.findFirst({
+    where: eq(marketsTable.id, params.id),
+    with: { outcomes: true },
+  });
+  if (!market) {
+    set.status = 404;
+    return { errors: ["Market not found"] };
+  }
+
+  if (market.status !== "active") {
+    set.status = 400;
+    return { errors: ["Market is not active"] };
+  }
+  const validOutcome = market.outcomes.find((o) => o.id === body.resolvedOutcomeId);
+  if (!validOutcome) {
+    set.status = 400;
+    return { error: ["Outcome does not belong to this market"] };
+  }
+  const updated = await db
+    .update(marketsTable)
+    .set({ status: "resolved", resolvedOutcomeId: body.resolvedOutcomeId })
+    .where(eq(marketsTable.id, params.id))
+    .returning();
+
+  assert(updated.length > 0);
+  broadcastSingleMarketUpdate(params.id);
+
+
+  return {
+    id: updated[0]!.id,
+    title: updated[0]!.title,
+    status: updated[0]!.status,
+    resolvedOutcomeId: updated[0]!.resolvedOutcomeId,
   };
 }
