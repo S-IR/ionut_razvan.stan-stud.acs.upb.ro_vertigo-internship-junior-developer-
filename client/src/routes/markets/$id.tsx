@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { api, Market } from "@/lib/api";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
 import { LabelList, Pie, PieChart } from "recharts";
+import { toast } from "sonner"
 
 import {
   ChartConfig,
@@ -27,6 +28,7 @@ const CHART_COLORS = [
 function MarketDetailPage() {
   const { id } = useParams({ from: "/markets/$id" });
   const startingMarket = Route.useLoaderData();
+
   const [market, setMarket] = useState<Market>(startingMarket);
   console.assert(market.outcomes && market.outcomes.length > 0)
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<number | null>(
@@ -35,7 +37,8 @@ function MarketDetailPage() {
   const [betAmount, setBetAmount] = useState("");
 
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  console.log("user", user)
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isBetting, setIsBetting] = useState(false);
@@ -141,12 +144,22 @@ function MarketDetailPage() {
       setBetAmount("");
       loadMarket()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to place bet");
+      const msg = err instanceof Error ? err.message : "Failed to place bet"
+      toast(msg)
+
+      // setError(err instanceof Error ? err.message : "Failed to place bet");
     } finally {
       setIsBetting(false);
     }
   };
 
+  async function closeMarket() {
+    if (selectedOutcomeId === null) {
+      setError("please select an outcome before proceeding to close the market")
+      return
+    }
+    api.closeMarket(marketId, selectedOutcomeId)
+  }
   if (!isAuthenticated) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -187,13 +200,18 @@ function MarketDetailPage() {
                 )}
                 {market.creator && (
                   <p className="mt-2 text-muted-foreground text-xs">
-                    Created by <span className="text-foreground">{market.creator}</span>
+                    Created by <span className="text -foreground">{market.creator}</span>
                   </p>
                 )}
               </div>
               <Badge variant={market.status === "active" ? "default" : "secondary"}>
                 {market.status === "active" ? "Active" : "Resolved"}
               </Badge>
+              {user?.role === "admin" &&
+                <Button onClick={closeMarket} variant={"cyan"}>
+                  Close Market
+                </Button>
+              }
             </div>
           </CardHeader>
         </Card>
@@ -206,46 +224,51 @@ function MarketDetailPage() {
               <CardDescription>Percentage of total bets per outcome</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={chartConfig}
-                className="[&_.recharts-text]:fill-foreground mx-auto max-h-[250px] aspect-square"
-              >
-                <PieChart>
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        nameKey="outcome"
-                        formatter={(value, name) => {
+              {market.totalMarketBets === 0 ?
+                <div>0 bets have been placed</div>
+                :
+                <ChartContainer
+                  config={chartConfig}
+                  className="[&_.recharts-text]:fill-foreground mx-auto max-h-[250px] aspect-square"
+                >
+                  <PieChart>
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          nameKey="outcome"
+                          formatter={(value, name) => {
+                            const total = market.totalMarketBets;
+                            const pct = total > 0 ? ((Number(value) / total) * 100).toFixed(1) : 0;
+                            return `${pct}% ($${Number(value).toLocaleString()})`;
+                          }}
+                        />
+                      }
+                    />
+                    <Pie
+                      data={chartData}
+                      innerRadius={30}
+                      dataKey="percentage"
+                      nameKey="outcome"
+                      cornerRadius={8}
+                      paddingAngle={4}
+                    >
+                      <LabelList
+                        dataKey="percentage"
+                        stroke="none"
+                        fontSize={12}
+                        fontWeight={500}
+                        fill="currentColor"
+                        formatter={(value) => {
                           const total = market.totalMarketBets;
-                          const pct = total > 0 ? ((Number(value) / total) * 100).toFixed(1) : 0;
-                          return `${pct}% ($${Number(value).toLocaleString()})`;
+                          const num = Number(value) || 0;
+                          return total > 0 ? `${((num / total) * 100).toFixed(0)}%` : "0%";
                         }}
                       />
-                    }
-                  />
-                  <Pie
-                    data={chartData}
-                    innerRadius={30}
-                    dataKey="percentage"
-                    nameKey="outcome"
-                    cornerRadius={8}
-                    paddingAngle={4}
-                  >
-                    <LabelList
-                      dataKey="percentage"
-                      stroke="none"
-                      fontSize={12}
-                      fontWeight={500}
-                      fill="currentColor"
-                      formatter={(value) => {
-                        const total = market.totalMarketBets;
-                        const num = Number(value) || 0;
-                        return total > 0 ? `${((num / total) * 100).toFixed(0)}%` : "0%";
-                      }}
-                    />
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+
+              }
 
               {/* Legend */}
               <div className="flex justify-center gap-4 mt-4">

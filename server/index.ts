@@ -20,11 +20,11 @@ export const app = new Elysia()
   .onError(({ code, set }) => {
     if (code === "NOT_FOUND") {
       set.status = 404;
-      return { error: "Not found" };
+      return { errors: ["Not found"] };
     }
     if (code === "VALIDATION") {
       set.status = 400;
-      return { error: "Invalid request" };
+      return { errors: ["Invalid request"] };
     }
   })
   .use(authRoutes)

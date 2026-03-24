@@ -11,11 +11,11 @@ import { Label } from "@/components/ui/label";
 
 function CreateMarketPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, isLoading: authIsLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || (user && user.role !== "admin")) {
     navigate({ to: "/auth/login" });
     return null;
   }
@@ -52,10 +52,10 @@ function CreateMarketPage() {
       }
     },
   });
-
+  if (authIsLoading) return <></>
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-4 min-h-screen">
+      <div className="mx-auto max-w-2xl">
         <Card>
           <CardHeader className="space-y-2">
             <CardTitle className="text-3xl">Create a Market</CardTitle>
@@ -142,12 +142,12 @@ function CreateMarketPage() {
               </div>
 
               {error && (
-                <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                <div className="bg-destructive/10 px-4 py-3 border border-destructive/20 rounded-md text-destructive text-sm">
                   {error}
                 </div>
               )}
-
               <div className="flex gap-4">
+
                 <Button type="submit" className="flex-1" disabled={isLoading}>
                   {isLoading ? "Creating..." : "Create Market"}
                 </Button>

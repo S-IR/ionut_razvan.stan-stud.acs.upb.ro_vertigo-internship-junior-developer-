@@ -21,7 +21,7 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
   .get("/me", ({ user, set }) => {
     if (!user) {
       set.status = 401;
-      return { error: "Unauthorized" };
+      return { errors: ["Unauthorized"] };
     }
     return user;
   })

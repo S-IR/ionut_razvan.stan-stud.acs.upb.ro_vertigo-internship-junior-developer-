@@ -29,6 +29,6 @@ export const requireAuth = new Elysia()
   .onBeforeHandle({ as: "scoped" }, ({ user, set }) => {
     if (!user) {
       set.status = 401;
-      return { error: "Unauthorized" };
+      return { errors: ["Unauthorized"] };
     }
   });

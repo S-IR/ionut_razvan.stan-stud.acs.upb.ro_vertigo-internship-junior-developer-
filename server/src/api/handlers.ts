@@ -1,6 +1,6 @@
 import { eq, and, sum, countDistinct, asc, desc, inArray, SQL, count, } from "drizzle-orm";
 import db from "../db";
-import { usersTable, marketsTable, marketOutcomesTable, betsTable } from "../db/schema";
+import { usersTable, marketsTable, marketOutcomesTable, betsTable, usersRelations } from "../db/schema";
 import { hashPassword, verifyPassword, type AuthTokenPayload } from "../lib/auth";
 import {
   validateRegistration,
@@ -90,7 +90,7 @@ export async function handleLogin(ctx: AuthContext<{
 
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     set.status = 401;
-    return { error: "Invalid email or password" };
+    return { errors: ["Invalid email or password"] };
   }
 
   const token = await jwt.sign({ userId: user.id });
@@ -314,7 +314,7 @@ export async function handleGetMarket({
 
   if (!market) {
     set.status = 404;
-    return { error: "Market not found" };
+    return { errors: ["Market not found"] };
   }
 
   const betsPerOutcome = await Promise.all(
@@ -379,21 +379,28 @@ export async function handlePlaceBet({
 
   if (!market) {
     set.status = 404;
-    return { error: "Market not found" };
+    return { errors: ["Market not found"] };
   }
 
   if (market.status !== "active") {
     set.status = 400;
-    return { error: "Market is not active" };
+    return { errors: ["Market is not active"] };
   }
+  const userAlreadyBet = await db.query.betsTable.findFirst({
+    where: and(eq(betsTable.userId, user.id), eq(betsTable.marketId, marketId)),
+  })
+  if (userAlreadyBet && userAlreadyBet.outcomeId !== outcomeId) {
+    set.status = 400;
+    return { errors: ["You cannot bet on multiple outcomes"] };
 
+  }
   const outcome = await db.query.marketOutcomesTable.findFirst({
     where: and(eq(marketOutcomesTable.id, outcomeId), eq(marketOutcomesTable.marketId, marketId)),
   });
 
   if (!outcome) {
     set.status = 404;
-    return { error: "Outcome not found" };
+    return { errors: ["Outcome not found"] };
   }
 
   const bet = await db
@@ -442,7 +449,7 @@ export async function handleCloseMarket({ body, params, set, user }: {
   const validOutcome = market.outcomes.find((o) => o.id === body.resolvedOutcomeId);
   if (!validOutcome) {
     set.status = 400;
-    return { error: ["Outcome does not belong to this market"] };
+    return { errors: ["Outcome does not belong to this market"] };
   }
   const updated = await db
     .update(marketsTable)

@@ -22,6 +22,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  role: "admin" | "normal"
 }
 
 export interface Bet {
@@ -124,6 +125,16 @@ class ApiClient {
       body: JSON.stringify({ outcomeId, amount }),
     });
   }
+
+  async closeMarket(marketId: number, outcomeId: number): Promise<Bet> {
+    // console.assert(amount != 0)
+
+    return this.request(`/api/markets/${marketId}/close`, {
+      method: "POST",
+      body: JSON.stringify({ resolvedOutcomeId: outcomeId }),
+    });
+  }
+
   async getUserBets(id: number, extraOptions: RequestInit = {}): Promise<BetWithDetails[]> {
 
     try {
