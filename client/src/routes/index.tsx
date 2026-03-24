@@ -13,23 +13,58 @@ import {
   Pagination, PaginationContent, PaginationEllipsis,
   PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination"
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 function DashboardPage() {
   const { isAuthenticated, user } = useAuth();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const { page, sort, status } = Route.useSearch();
-  const { markets, totalPages } = Route.useLoaderData();
-
+  const { markets: defaultMarkets, totalPages } = Route.useLoaderData();
+  const [markets, setMarkets] = useState(defaultMarkets)
   useEffect(() => {
-    const ws = new WebSocket('/api/markets/ws');
+
+    const ws = new WebSocket(
+      `${api.baseUrl.replace("http://", "ws://").replace("https://", "wss://")}/api/markets/ws/all`
+    );
     ws.onmessage = (e) => {
       const { type } = JSON.parse(e.data);
-      if (type === 'market_added') router.invalidate();
+      if (type === 'markets-updated') router.invalidate();
     };
     return () => ws.close();
   }, []);
+
+
+
+  useEffect(() => {
+    const LISTEN_TO_ALL_MARKET_UPDATES_ID = -1
+
+    console.log(`doing ws at /api/markets/ws/${LISTEN_TO_ALL_MARKET_UPDATES_ID} `)
+
+
+    const ws = new WebSocket(
+      `${api.baseUrl.replace("http://", "ws://").replace("https://", "wss://")}/api/markets/ws/${LISTEN_TO_ALL_MARKET_UPDATES_ID}`
+    );
+    ws.onmessage = async (e) => {
+      const { type, id: idFromWS } = JSON.parse(e.data);
+
+      if (type === 'market-updated') {
+        for (let i = 0; i < markets.length; i += 1) {
+          const m = markets[i]
+          if (m.id === idFromWS) {
+            const { markets: newMarkets } = await api.listMarkets(status, page, sort)
+            setMarkets(newMarkets)
+            break
+          }
+        }
+
+        // await loadMarket();
+      }
+    };
+
+    return () => ws.close();
+  }, []);
+
 
   if (!isAuthenticated) {
     return (
@@ -142,6 +177,7 @@ function DashboardPage() {
     </div>
   );
 }
+
 
 export const Route = createFileRoute("/")({
   component: DashboardPage,

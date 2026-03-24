@@ -1,3 +1,4 @@
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4001";
 
 export interface Market {
@@ -40,9 +41,13 @@ export enum MARKETS_SORT_BY_OPTION {
   NumOfParticipantsAsc = "NumOfParticipantsAscending",
   NumOfParticipantsDesc = "NumOfParticipantsDescending"
 }
+export type BetWithDetails = Bet & {
+  market: Market & { resolvedOutcomeId: number | null };
+  outcome: MarketOutcome;
+}
 
 class ApiClient {
-  private baseUrl: string;
+  public baseUrl: string;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -112,10 +117,21 @@ class ApiClient {
   }
 
   async placeBet(marketId: number, outcomeId: number, amount: number): Promise<Bet> {
+    console.assert(amount != 0)
+
     return this.request(`/api/markets/${marketId}/bets`, {
       method: "POST",
       body: JSON.stringify({ outcomeId, amount }),
     });
+  }
+  async getUserBets(id: number, extraOptions: RequestInit = {}): Promise<BetWithDetails[]> {
+
+    try {
+      return this.request(`/api/users/bets/${id}`, extraOptions)
+    } catch (e) {
+      throw new Error(`${e}`)
+    }
+
   }
 }
 

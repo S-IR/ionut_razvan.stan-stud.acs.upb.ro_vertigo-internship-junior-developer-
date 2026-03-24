@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { api, Market } from "@/lib/api";
@@ -7,53 +7,139 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { ArrowLeft } from "lucide-react";
+import { LabelList, Pie, PieChart } from "recharts";
+
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+const CHART_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 function MarketDetailPage() {
   const { id } = useParams({ from: "/markets/$id" });
+  const startingMarket = Route.useLoaderData();
+  const [market, setMarket] = useState<Market>(startingMarket);
+  console.assert(market.outcomes && market.outcomes.length > 0)
+  const [selectedOutcomeId, setSelectedOutcomeId] = useState<number | null>(
+    market?.outcomes?.length > 0 ? market.outcomes[0].id : null
+  );
+  const [betAmount, setBetAmount] = useState("");
+
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [market, setMarket] = useState<Market | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedOutcomeId, setSelectedOutcomeId] = useState<number | null>(null);
-  const [betAmount, setBetAmount] = useState("");
   const [isBetting, setIsBetting] = useState(false);
+
+
+
+
+  useEffect(() => {
+    console.log(`doing ws at /api/markets/ws/${id} `)
+
+
+    const ws = new WebSocket(
+      `${api.baseUrl.replace("http://", "ws://").replace("https://", "wss://")}/api/markets/ws/${id}`
+    );
+    ws.onmessage = async (e) => {
+      const { type, id: idFromWS } = JSON.parse(e.data);
+
+      if (type === 'market-updated' && idFromWS === parseInt(id, 10)) {
+        await loadMarket();
+      }
+    };
+    // ws.onopen = () => {
+    //   console.log("WS connected");
+    // };
+
+    // ws.onerror = (e) => {
+    //   console.error("WS error", e);
+    // };
+
+    // ws.onclose = () => {
+    //   console.log("WS closed");
+    // };
+    return () => ws.close();
+  }, [id]);
+
+
+
 
   const marketId = parseInt(id, 10);
 
-  useEffect(() => {
-    const loadMarket = async () => {
-      try {
-        setIsLoading(true);
-        const data = await api.getMarket(marketId);
-        setMarket(data);
-        if (data.outcomes.length > 0) {
-          setSelectedOutcomeId(data.outcomes[0].id);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load market details");
-      } finally {
-        setIsLoading(false);
-      }
+  const chartData = useMemo(() => {
+    return market.outcomes.map((outcome) => ({
+      outcome: outcome.title.toLowerCase().replace(/\s+/g, "-"),
+      percentage: outcome.totalBets,
+      fill: `var(--color-${outcome.title.toLowerCase().replace(/\s+/g, "-")})`,
+    }));
+  }, [market.outcomes]);
+
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {
+      percentage: {
+        label: "Bets",
+      },
     };
+    market.outcomes.forEach((outcome, index) => {
+      const key = outcome.title.toLowerCase().replace(/\s+/g, "-");
+      config[key] = {
+        label: outcome.title,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+      };
+    });
+    return config;
+  }, [market.outcomes]);
+
+  async function loadMarket() {
+    try {
+      setIsLoading(true);
+      const data = await api.getMarket(marketId);
+      console.log(`loadMarket data`, data)
+      setMarket(data);
+      if (data.outcomes.length > 0) {
+        setSelectedOutcomeId(data.outcomes[0].id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load market details");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  useEffect(() => {
+
 
     loadMarket();
   }, [marketId]);
 
   const handlePlaceBet = async () => {
-    if (!selectedOutcomeId || !betAmount) {
-      setError("Please select an outcome and enter a bet amount");
+    setError(null);
+
+    if (!selectedOutcomeId) {
+      setError("Please select an outcome");
+      return;
+    }
+
+    const amount = parseFloat(betAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setError("Please enter a valid positive amount");
       return;
     }
 
     try {
       setIsBetting(true);
-      setError(null);
-      await api.placeBet(marketId, selectedOutcomeId, parseFloat(betAmount));
+      await api.placeBet(market.id, selectedOutcomeId, amount);
       setBetAmount("");
-      // Reload market to show updated odds
-      const updated = await api.getMarket(marketId);
-      setMarket(updated);
+      loadMarket()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to place bet");
     } finally {
@@ -63,9 +149,9 @@ function MarketDetailPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex justify-center items-center min-h-screen">
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
+          <CardContent className="flex flex-col justify-center items-center gap-4 py-12">
             <p className="text-muted-foreground">Please log in to view this market</p>
             <Button onClick={() => navigate({ to: "/auth/login" })}>Login</Button>
           </CardContent>
@@ -73,43 +159,36 @@ function MarketDetailPage() {
       </div>
     );
   }
-
+  const selectedOutcome = market.outcomes.find((o) => o.id === selectedOutcomeId);
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading market...</p>
+      <div className="flex justify-center items-center w-full min-h-screen">
+        <div className="border-4 border-primary/20 border-t-primary rounded-full w-12 h-12 animate-spin" />
       </div>
     );
   }
-
-  if (!market) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
-            <p className="text-destructive">Market not found</p>
-            <Button onClick={() => navigate({ to: "/" })}>Back to Markets</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-      <div className="max-w-3xl mx-auto px-4 space-y-6">
-        {/* Header */}
-        <Button variant="outline" onClick={() => navigate({ to: "/" })}>
-          ← Back
+    <div className="bg-background min-h-screen dark">
+      <div className="mx-auto px-4 py-8 max-w-3xl">
+        {/* Back Button */}
+        <Button variant="ghost" size="sm" className="gap-2 mb-6">
+          <ArrowLeft className="w-4 h-4" />
+          Back
         </Button>
 
-        <Card>
+        {/* Market Header */}
+        <Card className="mb-6">
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex justify-between items-start gap-4">
               <div className="flex-1">
-                <CardTitle className="text-4xl">{market.title}</CardTitle>
+                <CardTitle className="text-2xl">{market.title}</CardTitle>
                 {market.description && (
-                  <CardDescription className="text-lg mt-2">{market.description}</CardDescription>
+                  <CardDescription className="mt-2">{market.description}</CardDescription>
+                )}
+                {market.creator && (
+                  <p className="mt-2 text-muted-foreground text-xs">
+                    Created by <span className="text-foreground">{market.creator}</span>
+                  </p>
                 )}
               </div>
               <Badge variant={market.status === "active" ? "default" : "secondary"}>
@@ -117,99 +196,170 @@ function MarketDetailPage() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {error && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
+        </Card>
 
-            {/* Outcomes Display */}
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold">Outcomes</h3>
-              {market.outcomes.map((outcome) => (
+        <div className="gap-6 grid md:grid-cols-2">
+          {/* Chart Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Bet Distribution</CardTitle>
+              <CardDescription>Percentage of total bets per outcome</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={chartConfig}
+                className="[&_.recharts-text]:fill-foreground mx-auto max-h-[250px] aspect-square"
+              >
+                <PieChart>
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        nameKey="outcome"
+                        formatter={(value, name) => {
+                          const total = market.totalMarketBets;
+                          const pct = total > 0 ? ((Number(value) / total) * 100).toFixed(1) : 0;
+                          return `${pct}% ($${Number(value).toLocaleString()})`;
+                        }}
+                      />
+                    }
+                  />
+                  <Pie
+                    data={chartData}
+                    innerRadius={30}
+                    dataKey="percentage"
+                    nameKey="outcome"
+                    cornerRadius={8}
+                    paddingAngle={4}
+                  >
+                    <LabelList
+                      dataKey="percentage"
+                      stroke="none"
+                      fontSize={12}
+                      fontWeight={500}
+                      fill="currentColor"
+                      formatter={(value) => {
+                        const total = market.totalMarketBets;
+                        const num = Number(value) || 0;
+                        return total > 0 ? `${((num / total) * 100).toFixed(0)}%` : "0%";
+                      }}
+                    />
+                  </Pie>
+                </PieChart>
+              </ChartContainer>
+
+              {/* Legend */}
+              <div className="flex justify-center gap-4 mt-4">
+                {market.outcomes.map((outcome, index) => (
+                  <div key={outcome.id} className="flex items-center gap-2">
+                    <div
+                      className="rounded-sm w-3 h-3"
+                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                    />
+                    <span className="text-muted-foreground text-sm">{outcome.title}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Current Odds Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Current Odds</CardTitle>
+              <CardDescription>Real-time odds for each outcome</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {market.outcomes.map((outcome, index) => (
                 <div
                   key={outcome.id}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                    selectedOutcomeId === outcome.id
-                      ? "border-primary bg-primary/5"
-                      : "border-secondary bg-secondary/5 hover:border-primary/50"
-                  }`}
+                  className={`p-3 rounded-lg border transition-colors cursor-pointer ${selectedOutcomeId === outcome.id
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-muted-foreground/50"
+                    }`}
                   onClick={() => market.status === "active" && setSelectedOutcomeId(outcome.id)}
                 >
                   <div className="flex justify-between items-center">
-                    <div className="flex-1">
-                      <h4 className="font-semibold">{outcome.title}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Total bets: ${outcome.totalBets.toFixed(2)}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="rounded-sm w-2.5 h-2.5"
+                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      />
+                      <span className="font-medium text-sm">{outcome.title}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-3xl font-bold text-primary">{outcome.odds}%</p>
-                      <p className="text-xs text-muted-foreground">odds</p>
-                    </div>
+                    <span className="font-bold text-xl">{outcome.odds}%</span>
                   </div>
+                  <p className="mt-1 ml-4 text-muted-foreground text-xs">
+                    ${outcome.totalBets.toLocaleString()} in bets
+                  </p>
                 </div>
               ))}
-            </div>
 
-            {/* Market Stats */}
-            <div className="rounded-lg p-6 border border-primary/20 bg-primary/5">
-              <p className="text-sm text-muted-foreground mb-1">Total Market Value</p>
-              <p className="text-4xl font-bold text-primary">
-                ${market.totalMarketBets.toFixed(2)}
-              </p>
-            </div>
+              {/* Total Market Value */}
+              <div className="pt-3 border-border border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">Total Market Value</span>
+                  <span className="font-bold text-lg">${market.totalMarketBets.toLocaleString()}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Betting Section */}
-            {market.status === "active" && (
-              <Card className="bg-secondary/5">
-                <CardHeader>
-                  <CardTitle>Place Your Bet</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Selected Outcome</Label>
-                    <div className="p-3 bg-white border border-secondary rounded-md">
-                      {market.outcomes.find((o) => o.id === selectedOutcomeId)?.title ||
-                        "None selected"}
-                    </div>
+        {/* Betting Section */}
+        {market.status === "active" && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-base">Place a Bet</CardTitle>
+              <CardDescription>Select an outcome above and enter your bet amount</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {error && (
+                <div className="bg-destructive/10 px-4 py-3 border border-destructive/20 rounded-md text-destructive-foreground text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="gap-4 grid sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Selected Outcome</Label>
+                  <div className="bg-muted/50 p-3 border border-border rounded-md text-sm">
+                    {selectedOutcome?.title || "None selected"}
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="betAmount">Bet Amount ($)</Label>
-                    <Input
-                      id="betAmount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={betAmount}
-                      onChange={(e) => setBetAmount(e.target.value)}
-                      placeholder="Enter amount"
-                      disabled={isBetting}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="betAmount">Amount ($)</Label>
+                  <Input
+                    id="betAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={betAmount}
+                    onChange={(e) => setBetAmount(e.target.value)}
+                    placeholder="0.00"
+                    disabled={isBetting}
+                  />
+                </div>
+              </div>
 
-                  <Button
-                    className="w-full text-lg py-6"
-                    onClick={handlePlaceBet}
-                    disabled={isBetting || !selectedOutcomeId || !betAmount}
-                  >
-                    {isBetting ? "Placing bet..." : "Place Bet"}
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+              <Button
+                className="w-full"
+                onClick={handlePlaceBet}
+                disabled={isBetting || !selectedOutcomeId || !betAmount}
+              >
+                {isBetting ? "Placing Bet..." : "Place Bet"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-            {market.status === "resolved" && (
-              <Card>
-                <CardContent className="py-6">
-                  <p className="text-muted-foreground">This market has been resolved.</p>
-                </CardContent>
-              </Card>
-            )}
-          </CardContent>
-        </Card>
+        {market.status === "resolved" && (
+          <Card className="mt-6">
+            <CardContent className="py-6 text-center">
+              <p className="text-muted-foreground">This market has been resolved.</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
@@ -217,4 +367,10 @@ function MarketDetailPage() {
 
 export const Route = createFileRoute("/markets/$id")({
   component: MarketDetailPage,
+
+  loader: async ({ params }) => {
+    const marketID = parseInt(params.id)
+    const data = await api.getMarket(marketID);
+    return data
+  },
 });
