@@ -145,3 +145,5 @@ export const betsRelations = relations(betsTable, ({ one }) => ({
     relationName: "bets",
   }),
 }));
+
+

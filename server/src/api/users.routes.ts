@@ -5,6 +5,7 @@ import { betsTable, marketsTable, usersTable } from "../db/schema";
 import db from "../db";
 import { and, count, desc, eq, sum } from "drizzle-orm";
 import { PAGE_LIMIT } from "./handlers";
+import { assertUser } from "../lib/assert";
 
 export const usersRoutes = new Elysia({ prefix: "/api/users" })
     .use(authMiddleware)
@@ -100,26 +101,5 @@ async function getLeaderboardsOfUser(ctx: { query: { page: number } }) {
     }
 
     return { topUsers, totalPages };
-
-}
-function assertUser(user: typeof usersTable.$inferSelect) {
-    if (process.env.ENV !== "DEV") return
-    console.assert(!!user)
-    console.assert(typeof user.id === "number")
-    console.assert(user.id >= 0)
-
-    console.assert(typeof user.email === "string")
-    console.assert(user.email !== "")
-
-    console.assert(typeof user.passwordHash === "string")
-    console.assert(user.passwordHash !== "")
-
-    console.assert(typeof user.role === "string")
-    console.assert(user.role === "admin" || user.role === "normal")
-
-    console.assert(typeof user.username === "string")
-    console.assert(user.username !== "")
-
-
 
 }
