@@ -9,22 +9,40 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ServerErrorRouteImport } from './routes/server-error'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LeaderboardsIndexRouteImport } from './routes/leaderboards/index'
 import { Route as UsersUserIDRouteImport } from './routes/users/$userID'
+import { Route as MarketsNotFoundRouteImport } from './routes/markets/not-found'
 import { Route as MarketsNewRouteImport } from './routes/markets/new'
 import { Route as MarketsIdRouteImport } from './routes/markets/$id'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 
+const ServerErrorRoute = ServerErrorRouteImport.update({
+  id: '/server-error',
+  path: '/server-error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LeaderboardsIndexRoute = LeaderboardsIndexRouteImport.update({
+  id: '/leaderboards/',
+  path: '/leaderboards/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersUserIDRoute = UsersUserIDRouteImport.update({
   id: '/users/$userID',
   path: '/users/$userID',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketsNotFoundRoute = MarketsNotFoundRouteImport.update({
+  id: '/markets/not-found',
+  path: '/markets/not-found',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketsNewRoute = MarketsNewRouteImport.update({
@@ -55,74 +73,102 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/server-error': typeof ServerErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/auth/register': typeof AuthRegisterRoute
   '/markets/$id': typeof MarketsIdRoute
   '/markets/new': typeof MarketsNewRoute
+  '/markets/not-found': typeof MarketsNotFoundRoute
   '/users/$userID': typeof UsersUserIDRoute
+  '/leaderboards/': typeof LeaderboardsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/server-error': typeof ServerErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/auth/register': typeof AuthRegisterRoute
   '/markets/$id': typeof MarketsIdRoute
   '/markets/new': typeof MarketsNewRoute
+  '/markets/not-found': typeof MarketsNotFoundRoute
   '/users/$userID': typeof UsersUserIDRoute
+  '/leaderboards': typeof LeaderboardsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/server-error': typeof ServerErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/auth/register': typeof AuthRegisterRoute
   '/markets/$id': typeof MarketsIdRoute
   '/markets/new': typeof MarketsNewRoute
+  '/markets/not-found': typeof MarketsNotFoundRoute
   '/users/$userID': typeof UsersUserIDRoute
+  '/leaderboards/': typeof LeaderboardsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/server-error'
     | '/auth/login'
     | '/auth/logout'
     | '/auth/register'
     | '/markets/$id'
     | '/markets/new'
+    | '/markets/not-found'
     | '/users/$userID'
+    | '/leaderboards/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/server-error'
     | '/auth/login'
     | '/auth/logout'
     | '/auth/register'
     | '/markets/$id'
     | '/markets/new'
+    | '/markets/not-found'
     | '/users/$userID'
+    | '/leaderboards'
   id:
     | '__root__'
     | '/'
+    | '/server-error'
     | '/auth/login'
     | '/auth/logout'
     | '/auth/register'
     | '/markets/$id'
     | '/markets/new'
+    | '/markets/not-found'
     | '/users/$userID'
+    | '/leaderboards/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ServerErrorRoute: typeof ServerErrorRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
   MarketsIdRoute: typeof MarketsIdRoute
   MarketsNewRoute: typeof MarketsNewRoute
+  MarketsNotFoundRoute: typeof MarketsNotFoundRoute
   UsersUserIDRoute: typeof UsersUserIDRoute
+  LeaderboardsIndexRoute: typeof LeaderboardsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/server-error': {
+      id: '/server-error'
+      path: '/server-error'
+      fullPath: '/server-error'
+      preLoaderRoute: typeof ServerErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -130,11 +176,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/leaderboards/': {
+      id: '/leaderboards/'
+      path: '/leaderboards'
+      fullPath: '/leaderboards/'
+      preLoaderRoute: typeof LeaderboardsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users/$userID': {
       id: '/users/$userID'
       path: '/users/$userID'
       fullPath: '/users/$userID'
       preLoaderRoute: typeof UsersUserIDRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/markets/not-found': {
+      id: '/markets/not-found'
+      path: '/markets/not-found'
+      fullPath: '/markets/not-found'
+      preLoaderRoute: typeof MarketsNotFoundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/markets/new': {
@@ -177,12 +237,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ServerErrorRoute: ServerErrorRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,
   AuthRegisterRoute: AuthRegisterRoute,
   MarketsIdRoute: MarketsIdRoute,
   MarketsNewRoute: MarketsNewRoute,
+  MarketsNotFoundRoute: MarketsNotFoundRoute,
   UsersUserIDRoute: UsersUserIDRoute,
+  LeaderboardsIndexRoute: LeaderboardsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

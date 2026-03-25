@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { handleRegister, handleLogin } from "./handlers";
 import { jwt } from "@elysiajs/jwt";
 import { authMiddleware } from "../middleware/auth.middleware";
+import { assertUser } from "../lib/assert";
 
 export const authRoutes = new Elysia({ prefix: "/api/auth" })
   .use(authMiddleware)
@@ -23,6 +24,7 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       set.status = 401;
       return { errors: ["Unauthorized"] };
     }
+    assertUser(user)
     return user;
   })
   .post("/logout", ({ cookie: { auth_token } }) => {

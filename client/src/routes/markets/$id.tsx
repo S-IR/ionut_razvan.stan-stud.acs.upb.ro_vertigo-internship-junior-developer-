@@ -1,5 +1,5 @@
 import { use, useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, createFileRoute } from "@tanstack/react-router";
+import { useParams, useNavigate, createFileRoute, redirect } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { api, Market } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ function MarketDetailPage() {
     ws.onmessage = async (e) => {
       const { type, id: idFromWS } = JSON.parse(e.data);
 
-      if (type === 'market-updated' && idFromWS === parseInt(id, 10)) {
+      if (type === 'market-updated' && idFromWS === id) {
         await loadMarket();
       }
     };
@@ -77,7 +77,6 @@ function MarketDetailPage() {
 
 
 
-  const marketId = parseInt(id, 10);
 
   const chartData = useMemo(() => {
     return market.outcomes.map((outcome) => ({
@@ -106,8 +105,7 @@ function MarketDetailPage() {
   async function loadMarket() {
     try {
       setIsLoading(true);
-      const data = await api.getMarket(marketId);
-      console.log(`loadMarket data`, data)
+      const data = await api.getMarket(id);
       setMarket(data);
       if (data.outcomes.length > 0) {
         setSelectedOutcomeId(data.outcomes[0].id);
@@ -122,7 +120,7 @@ function MarketDetailPage() {
 
 
     loadMarket();
-  }, [marketId]);
+  }, [id]);
 
   const handlePlaceBet = async () => {
     setError(null);
@@ -158,7 +156,11 @@ function MarketDetailPage() {
       setError("please select an outcome before proceeding to close the market")
       return
     }
-    api.closeMarket(marketId, selectedOutcomeId)
+    try {
+      api.closeMarket(id, selectedOutcomeId)
+    } catch (error) {
+      toast("could not close the market. please try again later")
+    }
   }
   if (!isAuthenticated) {
     return (
@@ -391,9 +393,25 @@ function MarketDetailPage() {
 export const Route = createFileRoute("/markets/$id")({
   component: MarketDetailPage,
 
+  params: {
+    parse: (params) => {
+      const id = Number(params.id);
+
+      if (!Number.isInteger(id) || id <= 0) {
+        throw redirect({ to: "/markets/not-found" });
+      }
+
+      return { id };
+    },
+  },
+
+
   loader: async ({ params }) => {
-    const marketID = parseInt(params.id)
-    const data = await api.getMarket(marketID);
-    return data
+    try {
+      return await api.getMarket(params.id);
+    } catch (error) {
+      console.log(error)
+      throw redirect({ to: "/server-error" })
+    }
   },
 });

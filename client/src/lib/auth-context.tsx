@@ -18,7 +18,7 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
   const login = (newUser: User) => setUser(newUser);
 
   const logout = async () => {
-    await api.logout();
+    await api.logout().catch((e) => console.error(e));
     setUser(null);
   };
 
@@ -45,5 +45,5 @@ export const getMeServerFn = createServerFn({ method: "GET" }).handler(async () 
   });
 
   if (!response.ok) return null;
-  return response.json();
+  return response.json() as Promise<{ user: User }>;
 });

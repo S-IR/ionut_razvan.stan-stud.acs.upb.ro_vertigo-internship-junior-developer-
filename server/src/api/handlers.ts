@@ -8,9 +8,9 @@ import {
   validateMarketCreation,
   validateBet,
 } from "../lib/validation";
-import { assert } from "../lib/assert";
 import { broadcastNewMarket, broadcastSingleMarketUpdate, SORT_BY_OPTION } from "./markets.routes";
 import { type Context } from "elysia";
+import { assertBet, assertEnrichedOutcome, assertMarket, assertOutcome, assertUser } from "../lib/assert";
 
 type JwtSigner = {
   sign: (payload: Record<string, string | number>) => Promise<string>;
@@ -29,9 +29,18 @@ export async function handleRegister(ctx: AuthContext<{
   password: string;
 }>) {
   const { body, jwt, set, cookie: { auth_token } } = ctx;
-  // if (!auth_token) return  { errors: [{ field: "auto", message: "User already exists" }] }
   if (auth_token === undefined) throw new Error("auth token is undefined")
   const { username, email, password } = body;
+
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof username === "string");
+    console.assert(username !== "");
+    console.assert(typeof email === "string");
+    console.assert(email !== "");
+    console.assert(typeof password === "string");
+    console.assert(password !== "");
+  }
+
   const errors = validateRegistration(username, email, password);
 
   if (errors.length > 0) {
@@ -43,6 +52,7 @@ export async function handleRegister(ctx: AuthContext<{
   });
 
   if (existingUser) {
+
     set.status = 409;
     return { errors: [{ field: "email", message: "User already exists" }] };
   }
@@ -50,9 +60,24 @@ export async function handleRegister(ctx: AuthContext<{
   const passwordHash = await hashPassword(password);
 
   const newUser = await db.insert(usersTable).values({ username, email, passwordHash }).returning()!;
-  assert(newUser.length > 0)
+  console.assert(newUser.length > 0)
+
+  if (process.env.ENV === "DEV") {
+    console.assert(!!newUser[0]);
+    console.assert(typeof newUser[0]!.id === "number");
+    console.assert(newUser[0]!.id >= 0);
+    console.assert(typeof newUser[0]!.username === "string");
+    console.assert(newUser[0]!.username !== "");
+    console.assert(typeof newUser[0]!.email === "string");
+    console.assert(newUser[0]!.email !== "");
+  }
 
   const token = await jwt.sign({ userId: newUser[0]!.id });
+
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof token === "string");
+    console.assert(token !== "");
+  }
 
   auth_token.set({
     value: token,
@@ -72,11 +97,18 @@ export async function handleLogin(ctx: AuthContext<{
   email: string;
   password: string;
 }>) {
-
   const { body, jwt, set, cookie: { auth_token } } = ctx;
   if (auth_token === undefined) throw new Error("auth token is undefined")
 
   const { email, password } = body;
+
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof email === "string");
+    console.assert(email !== "");
+    console.assert(typeof password === "string");
+    console.assert(password !== "");
+  }
+
   const errors = validateLogin(email, password);
 
   if (errors.length > 0) {
@@ -93,7 +125,15 @@ export async function handleLogin(ctx: AuthContext<{
     return { errors: ["Invalid email or password"] };
   }
 
+  assertUser(user);
+
   const token = await jwt.sign({ userId: user.id });
+
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof token === "string");
+    console.assert(token !== "");
+  }
+
   auth_token.set({
     value: token,
     httpOnly: true,
@@ -102,6 +142,7 @@ export async function handleLogin(ctx: AuthContext<{
     maxAge: AUTH_COOKIE_MAX_AGE,
     path: "/",
   });
+
   return {
     id: user.id,
     username: user.username,
@@ -120,10 +161,24 @@ export async function handleCreateMarket({
   user: typeof usersTable.$inferSelect;
 }) {
   const { title, description, outcomes } = body;
+
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof title === "string");
+    console.assert(title !== "");
+    console.assert(description === undefined || typeof description === "string");
+    console.assert(Array.isArray(outcomes));
+    console.assert(outcomes.length >= 2);
+    for (const o of outcomes) {
+      console.assert(typeof o === "string");
+      console.assert(o !== "");
+    }
+  }
+
+  assertUser(user);
+
   if (user.role !== "admin") {
     set.status = 401;
     return { errors: ["unauthorized to create a market"] }
-
   }
   const errors = validateMarketCreation(title, description || "", outcomes);
 
@@ -140,7 +195,8 @@ export async function handleCreateMarket({
       createdBy: user.id,
     })
     .returning();
-  assert(market.length > 0)
+  console.assert(market.length > 0)
+
   const outcomeIds = await db
     .insert(marketOutcomesTable)
     .values(
@@ -151,6 +207,15 @@ export async function handleCreateMarket({
       })),
     )
     .returning();
+
+  if (process.env.ENV === "DEV") {
+    assertMarket(market[0]!);
+    console.assert(outcomeIds.length === outcomes.length);
+    for (const o of outcomeIds) {
+      assertOutcome(o);
+      console.assert(o.marketId === market[0]!.id);
+    }
+  }
 
   set.status = 201;
   const newMarket = market[0]!
@@ -168,9 +233,17 @@ export async function handleCreateMarket({
     outcomes: outcomeIds,
   };
 }
-const MARKETS_DISPLAYED_PER_PAGE = 20
 
-export async function handleListMarkets({ query }: { query: { status?: string, page: number, sort: SORT_BY_OPTION[] } }) {
+export const PAGE_LIMIT = 20
+
+export async function handleListMarkets({ query, set }: {
+  query: {
+    status?: string, page: number, sort: SORT_BY_OPTION[],
+
+  },
+  set: { status: number };
+
+}) {
   const statusFilter: "active" | "resolved" =
     query.status === "resolved" ? "resolved" : "active";
 
@@ -192,9 +265,11 @@ export async function handleListMarkets({ query }: { query: { status?: string, p
     }
   }
 
-  assert(!(hasDateAsc && hasDateDesc), "Date sort conflict");
-  assert(!(hasNumPartAsc && hasNumPartDesc), "Participants sort conflict");
-  assert(!(hasTotalBetAsc && hasTotalBetDesc), "Total bet size sort conflict");
+  //router should've rejected the request already before reaching this point for these bad conditions
+  console.assert(!(hasDateAsc && hasDateDesc), "Date sort conflict");
+  console.assert(!(hasNumPartAsc && hasNumPartDesc), "Participants sort conflict");
+  console.assert(!(hasTotalBetAsc && hasTotalBetDesc), "Total bet size sort conflict");
+
 
   const orderBy: SQL[] = [];
   if (hasDateAsc) orderBy.push(asc(marketsTable.createdAt));
@@ -219,54 +294,36 @@ export async function handleListMarkets({ query }: { query: { status?: string, p
     .where(eq(marketsTable.status, statusFilter))
     .groupBy(marketsTable.id)
     .orderBy(...orderBy as [SQL, ...SQL[]])
-    .limit(MARKETS_DISPLAYED_PER_PAGE)
-    .offset(query.page * MARKETS_DISPLAYED_PER_PAGE)
+    .limit(PAGE_LIMIT)
+    .offset(query.page * PAGE_LIMIT)
 
   const marketIds = markets.map((m) => m.id)
 
-  const outcomes = await db.select({
-    id: marketOutcomesTable.id,
-    marketId: marketOutcomesTable.marketId,
-    title: marketOutcomesTable.title,
-    position: marketOutcomesTable.position,
-    totalBets: sum(betsTable.amount),
-  })
-    .from(marketOutcomesTable)
-    .leftJoin(betsTable, eq(betsTable.outcomeId, marketOutcomesTable.id))
-    .where(inArray(marketOutcomesTable.marketId, marketIds))
-    .groupBy(marketOutcomesTable.id)
-
-
-  // const markets = await db.query.marketsTable.findMany({
-  //   where: eq(marketsTable.status, statusFilter),
-  //   with: {
-  //     creator: {
-  //       columns: { username: true },
-  //     },
-
-  //     outcomes: {
-  //       orderBy: (outcomes, { asc, desc }) => hasTotalBetDesc ? desc(outcomes.position) : asc(outcomes.position),
-  //     },
-  //   },
-  //   orderBy: (markets, { desc, asc }) => hasDateAsc ? asc(markets.createdAt) : desc(markets.createdAt),
-  //   limit: MARKETS_DISPLAYED_PER_PAGE,
-  //   offset: query.page * MARKETS_DISPLAYED_PER_PAGE,
-  // });
-
-  // id: outcome.id,
-  //           title: outcome.title,
-  //           odds,
-  //           totalBets: outcomeBets,
+  const outcomes = marketIds.length > 0
+    ? await db.select({
+      id: marketOutcomesTable.id,
+      marketId: marketOutcomesTable.marketId,
+      title: marketOutcomesTable.title,
+      position: marketOutcomesTable.position,
+      totalBets: sum(betsTable.amount),
+    })
+      .from(marketOutcomesTable)
+      .leftJoin(betsTable, eq(betsTable.outcomeId, marketOutcomesTable.id))
+      .where(inArray(marketOutcomesTable.marketId, marketIds))
+      .groupBy(marketOutcomesTable.id)
+    : [];
 
   const totalCount = await db.select({ count: count() })
     .from(marketsTable)
     .where(eq(marketsTable.status, statusFilter));
 
-  const totalPages = totalCount !== undefined && totalCount[0] !== undefined ? Math.ceil(totalCount[0].count / MARKETS_DISPLAYED_PER_PAGE) : 0;
+  const totalPages = totalCount !== undefined && totalCount[0] !== undefined
+    ? Math.ceil(totalCount[0].count / PAGE_LIMIT)
+    : 0;
 
   const enrichedMarkets = markets.map((m) => {
     const currOutcomes = outcomes.filter((o) => o.marketId === m.id);
-    const totalMarketBets = Number(m.totalBetSize) ?? 0
+    const totalMarketBets = Number(m.totalBetSize) ?? 0;
     return {
       id: m.id,
       title: m.title,
@@ -280,15 +337,29 @@ export async function handleListMarkets({ query }: { query: { status?: string, p
         odds: totalMarketBets > 0 ? Number(((Number(o.totalBets) / totalMarketBets) * 100).toFixed(2)) : 0,
       })),
     };
+  });
 
-    // return {
-    //   ...m, outcomes: {
-    //     id: outcome?.id
-    //   title: outcome?.title,
+  if (process.env.ENV === "DEV") {
+    console.assert(!Number.isNaN(totalPages));
+    console.assert(totalPages >= 0);
 
-    //   }
-    // }
-  })
+    for (const m of enrichedMarkets) {
+      console.assert(!!m);
+      console.assert(typeof m.id === "number");
+      console.assert(m.id >= 0);
+      console.assert(typeof m.title === "string");
+      console.assert(m.title !== "");
+      console.assert(m.status === "active" || m.status === "resolved");
+      console.assert(typeof m.creator === "string");
+      console.assert(m.creator !== "");
+      console.assert(typeof m.totalMarketBets === "number");
+      console.assert(m.totalMarketBets >= 0);
+      console.assert(Array.isArray(m.outcomes));
+      for (const o of m.outcomes) {
+        assertEnrichedOutcome(o);
+      }
+    }
+  }
 
   return { totalPages, markets: enrichedMarkets };
 }
@@ -300,6 +371,11 @@ export async function handleGetMarket({
   params: { id: number };
   set: { status: number };
 }) {
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof params.id === "number");
+    console.assert(params.id >= 0);
+  }
+
   const market = await db.query.marketsTable.findFirst({
     where: eq(marketsTable.id, params.id),
     with: {
@@ -317,6 +393,17 @@ export async function handleGetMarket({
     return { errors: ["Market not found"] };
   }
 
+  if (process.env.ENV === "DEV") {
+    assertMarket(market);
+    console.assert(!!market.creator);
+    console.assert(typeof market.creator.username === "string");
+    console.assert(market.creator.username !== "");
+    console.assert(Array.isArray(market.outcomes));
+    for (const o of market.outcomes) {
+      assertOutcome(o);
+    }
+  }
+
   const betsPerOutcome = await Promise.all(
     market.outcomes.map(async (outcome) => {
       const totalBets = await db
@@ -325,13 +412,24 @@ export async function handleGetMarket({
         .where(eq(betsTable.outcomeId, outcome.id));
 
       const totalAmount = totalBets.reduce((sum, bet) => sum + bet.amount, 0);
+
+      if (process.env.ENV === "DEV") {
+        console.assert(typeof totalAmount === "number");
+        console.assert(totalAmount >= 0);
+      }
+
       return { outcomeId: outcome.id, totalBets: totalAmount };
     }),
   );
 
   const totalMarketBets = betsPerOutcome.reduce((sum, b) => sum + b.totalBets, 0);
 
-  return {
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof totalMarketBets === "number");
+    console.assert(totalMarketBets >= 0);
+  }
+
+  const result = {
     id: market.id,
     title: market.title,
     description: market.description,
@@ -342,6 +440,10 @@ export async function handleGetMarket({
       const odds =
         totalMarketBets > 0 ? Number(((outcomeBets / totalMarketBets) * 100).toFixed(2)) : 0;
 
+      if (process.env.ENV === "DEV") {
+        assertEnrichedOutcome({ id: outcome.id, title: outcome.title, totalBets: outcomeBets, odds });
+      }
+
       return {
         id: outcome.id,
         title: outcome.title,
@@ -351,7 +453,10 @@ export async function handleGetMarket({
     }),
     totalMarketBets,
   };
+
+  return result;
 }
+
 
 export async function handlePlaceBet({
   params,
@@ -366,6 +471,18 @@ export async function handlePlaceBet({
 }) {
   const marketId = params.id;
   const { outcomeId, amount } = body;
+
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof marketId === "number");
+    console.assert(marketId >= 0);
+    console.assert(typeof outcomeId === "number");
+    console.assert(outcomeId >= 0);
+    console.assert(typeof amount === "number");
+    console.assert(amount > 0);
+  }
+
+  assertUser(user);
+
   const errors = validateBet(amount);
 
   if (errors.length > 0) {
@@ -386,14 +503,16 @@ export async function handlePlaceBet({
     set.status = 400;
     return { errors: ["Market is not active"] };
   }
+
   const userAlreadyBet = await db.query.betsTable.findFirst({
     where: and(eq(betsTable.userId, user.id), eq(betsTable.marketId, marketId)),
   })
+
   if (userAlreadyBet && userAlreadyBet.outcomeId !== outcomeId) {
     set.status = 400;
     return { errors: ["You cannot bet on multiple outcomes"] };
-
   }
+
   const outcome = await db.query.marketOutcomesTable.findFirst({
     where: and(eq(marketOutcomesTable.id, outcomeId), eq(marketOutcomesTable.marketId, marketId)),
   });
@@ -401,6 +520,12 @@ export async function handlePlaceBet({
   if (!outcome) {
     set.status = 404;
     return { errors: ["Outcome not found"] };
+  }
+
+  if (process.env.ENV === "DEV") {
+    assertMarket(market);
+    assertOutcome(outcome);
+    console.assert(outcome.marketId === marketId);
   }
 
   const bet = await db
@@ -412,7 +537,16 @@ export async function handlePlaceBet({
       amount: Number(amount),
     })
     .returning();
-  assert(bet.length > 0)
+  console.assert(bet.length > 0)
+
+  if (process.env.ENV === "DEV") {
+    assertBet(bet[0]!);
+    console.assert(bet[0]!.userId === user.id);
+    console.assert(bet[0]!.marketId === marketId);
+    console.assert(bet[0]!.outcomeId === outcomeId);
+    console.assert(bet[0]!.amount === Number(amount));
+  }
+
   set.status = 201;
   broadcastSingleMarketUpdate(market.id)
   return {
@@ -423,20 +557,32 @@ export async function handlePlaceBet({
     amount: bet[0]!.amount,
   };
 }
+
 export async function handleCloseMarket({ body, params, set, user }: {
   params: { id: number },
   body: { resolvedOutcomeId: number };
   set: { status: number };
   user: typeof usersTable.$inferSelect
 }) {
+  if (process.env.ENV === "DEV") {
+    console.assert(typeof params.id === "number");
+    console.assert(params.id >= 0);
+    console.assert(typeof body.resolvedOutcomeId === "number");
+    console.assert(body.resolvedOutcomeId >= 0);
+  }
+
+  assertUser(user);
+
   if (user.role !== "admin") {
     set.status = 401;
     return { errors: ["unauthorized to close a market"] };
   }
+
   const market = await db.query.marketsTable.findFirst({
     where: eq(marketsTable.id, params.id),
     with: { outcomes: true },
   });
+
   if (!market) {
     set.status = 404;
     return { errors: ["Market not found"] };
@@ -446,20 +592,41 @@ export async function handleCloseMarket({ body, params, set, user }: {
     set.status = 400;
     return { errors: ["Market is not active"] };
   }
+
+  if (process.env.ENV === "DEV") {
+    assertMarket(market);
+    console.assert(Array.isArray(market.outcomes));
+    console.assert(market.outcomes.length > 0);
+    for (const o of market.outcomes) {
+      assertOutcome(o);
+    }
+  }
+
   const validOutcome = market.outcomes.find((o) => o.id === body.resolvedOutcomeId);
   if (!validOutcome) {
     set.status = 400;
     return { errors: ["Outcome does not belong to this market"] };
   }
+
   const updated = await db
     .update(marketsTable)
     .set({ status: "resolved", resolvedOutcomeId: body.resolvedOutcomeId })
     .where(eq(marketsTable.id, params.id))
     .returning();
 
-  assert(updated.length > 0);
-  broadcastSingleMarketUpdate(params.id);
+  console.assert(updated.length > 0);
 
+  if (process.env.ENV === "DEV") {
+    console.assert(!!updated[0]);
+    console.assert(typeof updated[0]!.id === "number");
+    console.assert(updated[0]!.id >= 0);
+    console.assert(updated[0]!.status === "resolved");
+    console.assert(updated[0]!.resolvedOutcomeId === body.resolvedOutcomeId);
+    console.assert(typeof updated[0]!.title === "string");
+    console.assert(updated[0]!.title !== "");
+  }
+
+  broadcastSingleMarketUpdate(params.id);
 
   return {
     id: updated[0]!.id,

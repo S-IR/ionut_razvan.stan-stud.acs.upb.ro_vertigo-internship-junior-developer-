@@ -47,6 +47,11 @@ export type BetWithDetails = Bet & {
   outcome: MarketOutcome;
 }
 
+interface LeaderboardUser {
+  id: number;
+  username: string;
+  totalWinnings: string | null;
+}
 class ApiClient {
   public baseUrl: string;
 
@@ -137,11 +142,11 @@ class ApiClient {
 
   async getUserBets(id: number, extraOptions: RequestInit = {}): Promise<BetWithDetails[]> {
 
-    try {
-      return this.request(`/api/users/bets/${id}`, extraOptions)
-    } catch (e) {
-      throw new Error(`${e}`)
-    }
+    return this.request(`/api/users/bets/${id}`, extraOptions)
+  }
+
+  async getLeaderboards(page: number, extraOptions: RequestInit = {}): Promise<{ totalPages: number, topUsers: LeaderboardUser[] }> {
+    return this.request(`/api/users/leaderboards?page=${page}`, extraOptions);
 
   }
 }

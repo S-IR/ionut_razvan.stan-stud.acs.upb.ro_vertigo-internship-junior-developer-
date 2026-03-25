@@ -17,24 +17,19 @@ import {
     PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Badge } from "@/components/ui/badge"
-import { getCookie } from '@tanstack/react-start/server'
+import { loadUserBets } from '@/lib/utils'
 
 export const Route = createFileRoute('/users/$userID')({
     loader: async ({ params }) => {
         const userIDNum = parseInt(params.userID)
         if (isNaN(userIDNum)) throw redirect({ to: "/auth/login" })
-        const user = await getMeServerFn()
-        if (!user || user.id !== userIDNum) throw redirect({ to: "/auth/login" })
-        const token = getCookie("auth_token");
-        if (!token) throw redirect({ to: "/auth/login" });
 
-        const res = await api.getUserBets(userIDNum, {
-            headers: {
-                Cookie: `auth_token=${token}`,
-            },
-        })
-
-        return res
+        try {
+            return await loadUserBets(userIDNum)
+        } catch (error) {
+            console.error(error)
+            throw redirect({ to: "/server-error" })
+        }
     },
 
     component: RouteComponent,

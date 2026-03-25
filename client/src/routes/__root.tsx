@@ -27,8 +27,8 @@ function NotFoundComponent() {
 
 export const Route = createRootRoute({
   loader: async () => {
-    const user = await getMeServerFn();
-    return { user };
+    const data = await getMeServerFn().catch(() => null);
+    return data;
   },
   head: () => ({
     meta: [
@@ -56,8 +56,8 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { user } = Route.useLoaderData();
-
+  const data = Route.useLoaderData();
+  const user = data?.user ?? null
   return (
     <html lang="en">
       <head>

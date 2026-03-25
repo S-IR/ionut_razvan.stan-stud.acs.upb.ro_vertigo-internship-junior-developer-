@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { z } from "zod"
 import { api, MARKETS_SORT_BY_OPTION } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ function DashboardPage() {
       const { type } = JSON.parse(e.data);
       if (type === 'markets-updated') router.invalidate();
     };
+    ws.onerror = (e) => {
+      console.error("WS ERROR", e)
+    }
     return () => ws.close();
   }, []);
 
@@ -52,14 +55,22 @@ function DashboardPage() {
         for (let i = 0; i < markets.length; i += 1) {
           const m = markets[i]
           if (m.id === idFromWS) {
-            const { markets: newMarkets } = await api.listMarkets(status, page, sort)
-            setMarkets(newMarkets)
+            try {
+              const { markets: newMarkets } = await api.listMarkets(status, page, sort)
+              setMarkets(newMarkets)
+            } catch (error) {
+              console.error("ERROR while trying to WS update new markets", error)
+            }
             break
           }
         }
 
         // await loadMarket();
       }
+      ws.onerror = (e) => {
+        console.error("WS ERROR", e)
+      }
+
     };
 
     return () => ws.close();
@@ -188,6 +199,11 @@ export const Route = createFileRoute("/")({
   }),
   loaderDeps: ({ search: { page, sort, status } }) => ({ page, sort, status }),
   loader: async ({ deps: { page, sort, status } }) => {
-    return api.listMarkets(status, page, sort);
+    try {
+      return api.listMarkets(status, page, sort);
+    } catch (error) {
+      console.error(error)
+      throw redirect({ to: "/server-error" })
+    }
   },
 });
