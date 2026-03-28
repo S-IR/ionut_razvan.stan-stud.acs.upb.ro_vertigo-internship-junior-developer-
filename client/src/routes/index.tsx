@@ -1,6 +1,6 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { z } from "zod"
-import { api, MARKETS_SORT_BY_OPTION } from "@/lib/api";
+import { api, APIError, ESMarketEvent, MARKETS_SORT_BY_OPTION } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { MarketCard } from "@/components/market-card";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,66 +20,45 @@ function DashboardPage() {
   const navigate = Route.useNavigate();
   const router = useRouter();
   const { page, sort, status } = Route.useSearch();
-  const { markets: defaultMarkets, totalPages } = Route.useLoaderData();
-  const [markets, setMarkets] = useState(defaultMarkets)
-  useEffect(() => {
+  // const { markets: startingMarkets, totalPages: startingTotalPages } = Route.useLoaderData();
+  const { markets, totalPages } = Route.useLoaderData();
 
-    const ws = new WebSocket(
-      `${api.baseUrl.replace("http://", "ws://").replace("https://", "wss://")}/api/markets/ws/all`
-    );
-    ws.onmessage = (e) => {
-      const { type } = JSON.parse(e.data);
-      if (type === 'markets-updated') router.invalidate();
-    };
-    ws.onerror = (e) => {
-      console.error("WS ERROR", e)
-    }
-    return () => ws.close();
-  }, []);
-
-
+  // const [totalPages, setTotalPages] = useState(startingTotalPages)
 
   useEffect(() => {
-    const LISTEN_TO_ALL_MARKET_UPDATES_ID = -1
+    const es = api.sseMarkets();
 
-    console.log(`doing ws at /api/markets/ws/${LISTEN_TO_ALL_MARKET_UPDATES_ID} `)
+    const handleMarketUpdated = async (e: MessageEvent) => {
+      const { id: idFromWS } = JSON.parse(e.data);
 
-
-    const ws = new WebSocket(
-      `${api.baseUrl.replace("http://", "ws://").replace("https://", "wss://")}/api/markets/ws/${LISTEN_TO_ALL_MARKET_UPDATES_ID}`
-    );
-    ws.onmessage = async (e) => {
-      const { type, id: idFromWS } = JSON.parse(e.data);
-
-      if (type === 'market-updated') {
-        for (let i = 0; i < markets.length; i += 1) {
-          const m = markets[i]
-          if (m.id === idFromWS) {
-            try {
-              const { markets: newMarkets } = await api.listMarkets(status, page, sort)
-              setMarkets(newMarkets)
-            } catch (error) {
-              console.error("ERROR while trying to WS update new markets", error)
-            }
-            break
-          }
+      for (let i = 0; i < markets.length; i++) {
+        if (markets[i].id === idFromWS) {
+          router.invalidate()
+          break;
         }
-
-        // await loadMarket();
       }
-      ws.onerror = (e) => {
-        console.error("WS ERROR", e)
-      }
-
     };
 
-    return () => ws.close();
-  }, []);
+    const handleNewMarket = async () => {
+      router.invalidate()
+    };
+
+    es.addEventListener(ESMarketEvent.MarketUpdated, handleMarketUpdated);
+    es.addEventListener(ESMarketEvent.NewMarket, handleNewMarket);
+
+    es.onerror = (e) => {
+      console.error("SSE error", e);
+    };
+
+    return () => {
+      es.close();
+    };
+  }, [page, sort, status]);
 
 
   if (!isAuthenticated) {
     return (
-      <div className="flex justify-center items-center bg-[#2c2c2c] min-h-screen align-middle">
+      <div className="flex justify-center items-center min-h-screen align-middle">
         <div className="text-center">
           <h1 className="mb-4 font-mali font-bold text-cyan-200 text-8xl">Folley</h1>
           <p className="mb-8 text-gray-200 text-lg">Create and participate in prediction markets</p>
@@ -101,7 +80,7 @@ function DashboardPage() {
   }
 
   return (
-    <div className="bg-[#2c2c2c] min-h-screen">
+    <div className="min-h-screen">
       <div className="mx-auto px-4 py-8 max-w-7xl">
         <div className="flex justify-between items-center mb-8">
           <div>

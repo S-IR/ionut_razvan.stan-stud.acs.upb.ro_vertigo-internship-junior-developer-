@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServerErrorRouteImport } from './routes/server-error'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LeaderboardsIndexRouteImport } from './routes/leaderboards/index'
+import { Route as UsersNotFoundRouteImport } from './routes/users/not-found'
 import { Route as UsersUserIDRouteImport } from './routes/users/$userID'
 import { Route as MarketsNotFoundRouteImport } from './routes/markets/not-found'
 import { Route as MarketsNewRouteImport } from './routes/markets/new'
@@ -33,6 +34,11 @@ const IndexRoute = IndexRouteImport.update({
 const LeaderboardsIndexRoute = LeaderboardsIndexRouteImport.update({
   id: '/leaderboards/',
   path: '/leaderboards/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersNotFoundRoute = UsersNotFoundRouteImport.update({
+  id: '/users/not-found',
+  path: '/users/not-found',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsersUserIDRoute = UsersUserIDRouteImport.update({
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/markets/new': typeof MarketsNewRoute
   '/markets/not-found': typeof MarketsNotFoundRoute
   '/users/$userID': typeof UsersUserIDRoute
+  '/users/not-found': typeof UsersNotFoundRoute
   '/leaderboards/': typeof LeaderboardsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/markets/new': typeof MarketsNewRoute
   '/markets/not-found': typeof MarketsNotFoundRoute
   '/users/$userID': typeof UsersUserIDRoute
+  '/users/not-found': typeof UsersNotFoundRoute
   '/leaderboards': typeof LeaderboardsIndexRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/markets/new': typeof MarketsNewRoute
   '/markets/not-found': typeof MarketsNotFoundRoute
   '/users/$userID': typeof UsersUserIDRoute
+  '/users/not-found': typeof UsersNotFoundRoute
   '/leaderboards/': typeof LeaderboardsIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/markets/new'
     | '/markets/not-found'
     | '/users/$userID'
+    | '/users/not-found'
     | '/leaderboards/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/markets/new'
     | '/markets/not-found'
     | '/users/$userID'
+    | '/users/not-found'
     | '/leaderboards'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/markets/new'
     | '/markets/not-found'
     | '/users/$userID'
+    | '/users/not-found'
     | '/leaderboards/'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   MarketsNewRoute: typeof MarketsNewRoute
   MarketsNotFoundRoute: typeof MarketsNotFoundRoute
   UsersUserIDRoute: typeof UsersUserIDRoute
+  UsersNotFoundRoute: typeof UsersNotFoundRoute
   LeaderboardsIndexRoute: typeof LeaderboardsIndexRoute
 }
 
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/leaderboards'
       fullPath: '/leaderboards/'
       preLoaderRoute: typeof LeaderboardsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/not-found': {
+      id: '/users/not-found'
+      path: '/users/not-found'
+      fullPath: '/users/not-found'
+      preLoaderRoute: typeof UsersNotFoundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/users/$userID': {
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketsNewRoute: MarketsNewRoute,
   MarketsNotFoundRoute: MarketsNotFoundRoute,
   UsersUserIDRoute: UsersUserIDRoute,
+  UsersNotFoundRoute: UsersNotFoundRoute,
   LeaderboardsIndexRoute: LeaderboardsIndexRoute,
 }
 export const routeTree = rootRouteImport

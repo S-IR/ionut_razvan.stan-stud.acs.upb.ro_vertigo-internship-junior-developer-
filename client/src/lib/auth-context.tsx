@@ -8,6 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (user: User) => void;
   logout: () => Promise<void>;
+  refresh: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -21,9 +22,13 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
     await api.logout().catch((e) => console.error(e));
     setUser(null);
   };
+  const refresh = async () => {
+    const newUser = await api.me()
+    setUser(newUser)
+  }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading: false, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, isLoading: false, login, logout, isAuthenticated: !!user, refresh }}>
       {children}
     </AuthContext.Provider>
   );
@@ -38,12 +43,11 @@ export const getMeServerFn = createServerFn({ method: "GET" }).handler(async () 
   const token = getCookie("auth_token");
   if (!token) return null;
 
-  const response = await fetch(`${process.env.VITE_API_URL || "http://localhost:4001"}/api/auth/me`, {
+  const user = await api.me({
     headers: {
       Cookie: `auth_token=${token}`,
-    },
-  });
+    }
+  })
 
-  if (!response.ok) return null;
-  return response.json() as Promise<{ user: User }>;
+  return user
 });

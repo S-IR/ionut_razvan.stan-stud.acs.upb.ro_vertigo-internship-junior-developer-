@@ -14,7 +14,7 @@ export function MarketCard({ market }: MarketCardProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex justify-between items-start">
           <div className="flex-1">
             <CardTitle className="text-xl">{market.title}</CardTitle>
             <CardDescription>By: {market.creator || "Unknown"}</CardDescription>
@@ -30,25 +30,25 @@ export function MarketCard({ market }: MarketCardProps) {
           {market.outcomes.map((outcome) => (
             <div
               key={outcome.id}
-              className="flex items-center justify-between bg-secondary/20 p-3 rounded-md"
+              className="flex justify-between items-center bg-secondary/20 p-3 rounded-md"
             >
               <div>
-                <p className="text-sm font-medium">{outcome.title}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-medium text-sm">{outcome.title}</p>
+                <p className="text-muted-foreground text-xs">
                   ${outcome.totalBets.toFixed(2)} total
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold">{outcome.odds}%</p>
+                <p className="font-bold text-lg">{outcome.odds}%</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* Total Market Value */}
-        <div className="p-3 rounded-md border border-primary/20 bg-primary/5">
-          <p className="text-xs text-muted-foreground">Total Market Value</p>
-          <p className="text-2xl font-bold text-primary">${market.totalMarketBets.toFixed(2)}</p>
+        <div className="bg-primary/5 p-3 border border-primary/20 rounded-md">
+          <p className="text-muted-foreground text-xs">Total Market Value</p>
+          <p className="font-bold text-primary text-2xl">${market.totalMarketBets.toFixed(2)}</p>
         </div>
 
         {/* Action Button */}

@@ -26,12 +26,14 @@ export const usersTable = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),
+    balance: real("balance").notNull().default(1000.0)
   },
   (table) => ({
     usernameIdx: uniqueIndex("users_username_idx").on(table.username),
     emailIdx: uniqueIndex("users_email_idx").on(table.email),
   }),
 );
+export const MARKET_STATUSES = ["active", "resolved"] as const;
 
 // Markets table
 export const marketsTable = sqliteTable(
@@ -40,7 +42,7 @@ export const marketsTable = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     title: text("title").notNull(),
     description: text("description"),
-    status: text("status", { enum: ["active", "resolved"] })
+    status: text("status", { enum: MARKET_STATUSES })
       .notNull()
       .default("active"),
     createdBy: integer("created_by")
@@ -91,6 +93,7 @@ export const betsTable = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),
+    winnings: real()
   },
   (table) => ({
     userIdIdx: index("bets_user_id_idx").on(table.userId),
@@ -103,6 +106,8 @@ export const betsTable = sqliteTable(
 export const usersRelations = relations(usersTable, ({ many }) => ({
   createdMarkets: many(marketsTable, { relationName: "createdBy" }),
   bets: many(betsTable, { relationName: "bets" }),
+  apiKeys: many(apiKeysTable),
+
 }));
 
 export const marketsRelations = relations(marketsTable, ({ one, many }) => ({
@@ -147,3 +152,21 @@ export const betsRelations = relations(betsTable, ({ one }) => ({
 }));
 
 
+
+export const apiKeysTable = sqliteTable("api_keys", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => usersTable.id),
+  name: text("name").notNull(),
+  keyHash: text("key_hash").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull().$defaultFn(() => new Date()),
+  lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+  expiresAt: integer("expires_at", { mode: "timestamp" })
+});
+
+export const apiKeysRelations = relations(apiKeysTable, ({ one }) => ({
+  user: one(usersTable, {
+    fields: [apiKeysTable.userId],
+    references: [usersTable.id],
+  }),
+}));

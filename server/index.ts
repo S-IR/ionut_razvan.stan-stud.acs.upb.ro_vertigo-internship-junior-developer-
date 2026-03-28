@@ -4,7 +4,10 @@ import { authRoutes } from "./src/api/auth.routes";
 import { marketRoutes } from "./src/api/markets.routes";
 import { jwtPlugin } from "./src/plugins/jwt";
 import { usersRoutes } from "./src/api/users.routes";
-
+import cron from "node-cron";
+import db from "./src/db";
+import { apiKeysTable } from "./src/db/schema";
+import { lt } from "drizzle-orm";
 const PORT = Number(process.env.PORT || 4001);
 const HOST = process.env.HOST || "0.0.0.0";
 
@@ -38,3 +41,10 @@ if (import.meta.main) {
   });
   console.log(`🚀 Server running at http://${HOST}:${PORT}`);
 }
+cron.schedule("0 * * * *", async () => {
+  const now = new Date();
+  await db
+    .delete(apiKeysTable)
+    .where(lt(apiKeysTable.expiresAt, now));
+
+});

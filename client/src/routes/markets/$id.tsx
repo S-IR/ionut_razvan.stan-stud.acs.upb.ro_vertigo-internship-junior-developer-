@@ -1,13 +1,13 @@
-import { use, useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, createFileRoute, redirect } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate, createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
-import { api, Market } from "@/lib/api";
+import { api, Market, ESMarketEvent } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Router } from "lucide-react";
 import { LabelList, Pie, PieChart } from "recharts";
 import { toast } from "sonner"
 
@@ -17,6 +17,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { assert } from "@/lib/utils";
 const CHART_COLORS = [
   "var(--chart-1)",
   "var(--chart-2)",
@@ -27,10 +28,10 @@ const CHART_COLORS = [
 
 function MarketDetailPage() {
   const { id } = useParams({ from: "/markets/$id" });
-  const startingMarket = Route.useLoaderData();
+  const market = Route.useLoaderData();
+  const router = useRouter();
 
-  const [market, setMarket] = useState<Market>(startingMarket);
-  console.assert(market.outcomes && market.outcomes.length > 0)
+  assert(!!market.outcomes && market.outcomes.length > 0)
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<number | null>(
     market?.outcomes?.length > 0 ? market.outcomes[0].id : null
   );
@@ -38,40 +39,31 @@ function MarketDetailPage() {
 
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
-  console.log("user", user)
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBetting, setIsBetting] = useState(false);
 
 
-
+  // console.log("market", market)
 
   useEffect(() => {
-    console.log(`doing ws at /api/markets/ws/${id} `)
+    const es = api.sseMarkets(id);
 
+    const handleUpdate = async (e: MessageEvent) => {
+      const { id: idFromWS } = JSON.parse(e.data);
 
-    const ws = new WebSocket(
-      `${api.baseUrl.replace("http://", "ws://").replace("https://", "wss://")}/api/markets/ws/${id}`
-    );
-    ws.onmessage = async (e) => {
-      const { type, id: idFromWS } = JSON.parse(e.data);
-
-      if (type === 'market-updated' && idFromWS === id) {
-        await loadMarket();
+      if (idFromWS === id) {
+        router.invalidate();
       }
     };
-    // ws.onopen = () => {
-    //   console.log("WS connected");
-    // };
 
-    // ws.onerror = (e) => {
-    //   console.error("WS error", e);
-    // };
+    es.addEventListener(ESMarketEvent.MarketUpdated, handleUpdate);
 
-    // ws.onclose = () => {
-    //   console.log("WS closed");
-    // };
-    return () => ws.close();
+    es.onerror = (e) => {
+      console.error("SSE error", e);
+    };
+
+    return () => es.close();
   }, [id]);
 
 
@@ -102,25 +94,7 @@ function MarketDetailPage() {
     return config;
   }, [market.outcomes]);
 
-  async function loadMarket() {
-    try {
-      setIsLoading(true);
-      const data = await api.getMarket(id);
-      setMarket(data);
-      if (data.outcomes.length > 0) {
-        setSelectedOutcomeId(data.outcomes[0].id);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load market details");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-  useEffect(() => {
 
-
-    loadMarket();
-  }, [id]);
 
   const handlePlaceBet = async () => {
     setError(null);
@@ -138,9 +112,10 @@ function MarketDetailPage() {
 
     try {
       setIsBetting(true);
-      await api.placeBet(market.id, selectedOutcomeId, amount);
-      setBetAmount("");
-      loadMarket()
+      await api.placeBet(market.id, selectedOutcomeId, amount).then(() => {
+        router.invalidate()
+        setBetAmount("");
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to place bet"
       toast(msg)
@@ -175,13 +150,13 @@ function MarketDetailPage() {
     );
   }
   const selectedOutcome = market.outcomes.find((o) => o.id === selectedOutcomeId);
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center w-full min-h-screen">
-        <div className="border-4 border-primary/20 border-t-primary rounded-full w-12 h-12 animate-spin" />
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="flex justify-center items-center w-full min-h-screen">
+  //       <div className="border-4 border-primary/20 border-t-primary rounded-full w-12 h-12 animate-spin" />
+  //     </div>
+  //   );
+  // }
   return (
     <div className="bg-background min-h-screen dark">
       <div className="mx-auto px-4 py-8 max-w-3xl">
@@ -310,6 +285,8 @@ function MarketDetailPage() {
                         style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                       />
                       <span className="font-medium text-sm">{outcome.title}</span>
+                      <span className="from-teal-200 font-medium text-xs">odds: {outcome.odds} </span>
+
                     </div>
                     <span className="font-bold text-xl">{outcome.odds}%</span>
                   </div>
@@ -358,10 +335,10 @@ function MarketDetailPage() {
                     id="betAmount"
                     type="number"
                     step="0.01"
-                    min="0"
+                    min="1"
                     value={betAmount}
                     onChange={(e) => setBetAmount(e.target.value)}
-                    placeholder="0.00"
+                    placeholder="1.00"
                     disabled={isBetting}
                   />
                 </div>

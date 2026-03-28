@@ -1,4 +1,4 @@
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Outlet, Scripts, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { AuthProvider, getMeServerFn } from "@/lib/auth-context";
@@ -27,7 +27,7 @@ function NotFoundComponent() {
 
 export const Route = createRootRoute({
   loader: async () => {
-    const data = await getMeServerFn().catch(() => null);
+    const data = await getMeServerFn()
     return data;
   },
   head: () => ({
@@ -50,37 +50,45 @@ export const Route = createRootRoute({
       },
     ],
   }),
-
+  component: RootComponent,
   shellComponent: RootDocument,
   notFoundComponent: NotFoundComponent,
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const data = Route.useLoaderData();
-  const user = data?.user ?? null
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <AuthProvider initialUser={user} >
-          {children}
-          <Toaster />
-          <TanStackDevtools
-            config={{
-              position: "bottom-right",
-            }}
-            plugins={[
-              {
-                name: "Tanstack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-            ]}
-          />
-        </AuthProvider>
+        {children}
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function RootComponent() {
+  const user = Route.useLoaderData();
+  const isLoading = useRouterState({ select: (s) => s.isLoading && s.status === "pending" && s.resolvedLocation !== null });
+
+  return (
+    <AuthProvider initialUser={user}>
+      {isLoading && (
+        <div className="z-50 fixed inset-0 flex justify-center items-center bg-black/50">
+          <div className="flex flex-col items-center gap-3 bg-white shadow-xl px-10 py-8 rounded-xl">
+            <div className="border-4 border-gray-200 border-t-blue-600 rounded-full w-8 h-8 animate-spin" />
+            <p className="font-medium text-gray-600 text-sm">Loading...</p>
+          </div>
+        </div>
+      )}
+      <Outlet />
+      <Toaster />
+      <TanStackDevtools
+        config={{ position: "bottom-right" }}
+        plugins={[{ name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> }]}
+      />
+    </AuthProvider>
   );
 }

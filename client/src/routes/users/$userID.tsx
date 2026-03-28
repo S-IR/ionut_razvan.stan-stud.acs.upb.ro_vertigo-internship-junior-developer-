@@ -1,67 +1,280 @@
-import { api, BetWithDetails } from '@/lib/api'
+import { api, APIError, BetWithDetails, BET_STATUSES, APIKey, MarketStatuses, MarketWithoutOutcomes, ESMarketEvent, ESUserEvent } from '@/lib/api'
 import { getMeServerFn, useAuth } from '@/lib/auth-context'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import {
     Card,
-    CardAction,
     CardContent,
-    CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     Pagination, PaginationContent, PaginationEllipsis,
     PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Badge } from "@/components/ui/badge"
-import { loadUserBets } from '@/lib/utils'
+import { z } from "zod"
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
+    DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from '@/components/ui/button'
+import { assert, getUserAPIKeysServerSide } from '@/lib/utils'
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { AlertTriangle, Check, Copy, Key, Plus, Trash2 } from 'lucide-react'
+import { BetsList } from '@/components/user/bets'
+import { MarketsList } from '@/components/user/markets'
+import { ApiKeysTab } from '@/components/user/api-keys'
 
 export const Route = createFileRoute('/users/$userID')({
-    loader: async ({ params }) => {
-        const userIDNum = parseInt(params.userID)
-        if (isNaN(userIDNum)) throw redirect({ to: "/auth/login" })
+
+
+
+
+    params: {
+        parse: (params) => {
+            const id = Number(params.userID);
+
+            if (!Number.isInteger(id) || id <= 0) {
+                throw redirect({ to: "/users/not-found" });
+            }
+
+            return { userID: id };
+        },
+    },
+    validateSearch: z.object({
+        betPage: z.number().default(0),
+        marketsPage: z.number().default(0),
+        marketStatus: z.optional(z.enum(MarketStatuses)),
+        apiKeyPage: z.number().default(0),
+        betStatus: z.optional(z.enum(BET_STATUSES)),
+    }),
+    loaderDeps: ({ search: { betPage, marketsPage, marketStatus, betStatus, apiKeyPage } }) =>
+        ({ betPage, marketsPage, marketStatus, betStatus, apiKeyPage }),
+
+    loader: async ({ params, deps }) => {
 
         try {
-            return await loadUserBets(userIDNum)
+            const betsObj = await api.getUserBets(params.userID, deps.betPage, deps.betStatus)
+            const marketsObj = await api.getUserMarkets(params.userID, deps.marketsPage, deps.marketStatus)
+            const user = await api.getUser(params.userID)
+            const isServerSide = typeof window === 'undefined'
+            const me = isServerSide ? await getMeServerFn() : await api.me()
+            const sameUser = me && user.id === me.id
+
+            let apiKeysObj: {
+                keys: APIKey[];
+                totalPages: number;
+            } = { keys: [], totalPages: 0 }
+            if (sameUser) {
+                apiKeysObj = isServerSide ? await getUserAPIKeysServerSide(deps.apiKeyPage) : await api.getUserApiKeys(deps.apiKeyPage)
+            }
+            const lastBetPage = Math.max(0, betsObj.totalPages - 1)
+            const lastMarketsPage = Math.max(0, marketsObj.totalPages - 1)
+            const lastApiKeyPage = Math.max(0, apiKeysObj.totalPages - 1)
+
+            if (
+                (betsObj.totalPages > 0 && deps.betPage > lastBetPage) ||
+                (marketsObj.totalPages > 0 && deps.marketsPage > lastMarketsPage) ||
+                (apiKeysObj.totalPages > 0 && deps.apiKeyPage > lastApiKeyPage)
+            ) {
+                throw redirect({
+                    to: '/users/$userID',
+                    params: { userID: params.userID },
+                    search: (prev) => ({
+                        ...prev,
+                        betPage: betsObj.totalPages > 0 ? Math.min(deps.betPage, lastBetPage) : 0,
+                        marketsPage: marketsObj.totalPages > 0 ? Math.min(deps.marketsPage, lastMarketsPage) : 0,
+                        apiKeyPage: apiKeysObj.totalPages > 0 ? Math.min(deps.apiKeyPage, lastApiKeyPage) : 0,
+                    }),
+                })
+            }
+
+            return {
+                user,
+                bets: betsObj.bets,
+                betsTotalPages: betsObj.totalPages,
+                keys: apiKeysObj.keys,
+                apiKeysTotalPages: apiKeysObj.totalPages,
+                markets: marketsObj.markets,
+                marketsTotalPages: marketsObj.totalPages,
+            }
         } catch (error) {
             console.error(error)
-            throw redirect({ to: "/server-error" })
+
+            if (error instanceof APIError) {
+                if (error.status === 401) {
+                    throw redirect({ to: "/auth/login" })
+                } if (error.status === 404) {
+                    throw redirect({ to: "/users/not-found" })
+                } else {
+                    throw redirect({ to: "/server-error" })
+                }
+            } else {
+                throw error
+            }
         }
     },
 
     component: RouteComponent,
 })
 
-const ITEMS_PER_USER_PAGE = 20
 function RouteComponent() {
     const navigate = Route.useNavigate();
-    const bets = Route.useLoaderData();
-    const [activeBets] = useState(bets.filter((bet) => bet.market.status === "active"))
-    const [resolvedBets] = useState(bets.filter((bet) => bet.market.status === "resolved"))
+    const { user, bets, betsTotalPages, keys, apiKeysTotalPages, markets, marketsTotalPages } = Route.useLoaderData();
 
-    const { user } = useAuth();
+    if (betsTotalPages === 0) assert(bets.length === 0)
+    if (marketsTotalPages === 0) assert(markets.length === 0)
+    if (apiKeysTotalPages === 0) assert(keys.length === 0)
+
+    // const [bets, setBets] = useState(initialBets)
+    // const [betsTotalPages, setBetsTotalPages] = useState(initialBetsTotalPages)
+
+    // const [markets, setMarkets] = useState(initialMarkets)
+    // const [marketsTotalPages, setMarketsTotalPages] = useState(initialMarketsTotalPages)
+
+    // const [keys, setKeys] = useState(initialApiKeys)
+    // const [apiKeysTotalPages, setApiKeysTotalPages] = useState(initialApiKeysTotalPages)
+
+    const [activeBets] = useState(() => bets.filter((bet) => bet.market.status === "active"))
+    const [resolvedBets] = useState(() => bets.filter((bet) => bet.market.status === "resolved"))
+
+    const router = useRouter();
+
+    const [developerMode, setDeveloperMode] = useState(false)
+
+    useEffect(() => {
+        const saved = localStorage.getItem('developerMode')
+        if (saved === 'true') {
+            setDeveloperMode(true)
+        }
+    }, [])
+
+
+
+    const { user: userThatsBrowsing } = useAuth();
+    const sameUser = user.id === userThatsBrowsing?.id
+
+    const { userID } = Route.useParams()
+    const { betPage, betStatus, apiKeyPage, marketsPage, marketStatus } = Route.useSearch()
+
     if (!user) return navigate({ to: "/auth/login" })
 
+    async function refetchKeys() {
+        router.invalidate()
+    }
+
+
+    async function refetchMarkets() {
+        router.invalidate()
+    }
+    useEffect(() => {
+        const es = api.sseUsers()
+
+        const handleUserUpdate = (e: MessageEvent) => {
+            const { userID: idFromWS } = JSON.parse(e.data);
+
+            if (idFromWS === userID) {
+                router.invalidate();
+            }
+        };
+
+        const handleNewBet = async (e: MessageEvent) => {
+            const { userID: idFromWS } = JSON.parse(e.data);
+
+            if (idFromWS !== userID) return;
+            router.invalidate()
+        };
+
+        es.addEventListener(ESUserEvent.UserUpdated, handleUserUpdate);
+        es.addEventListener(ESUserEvent.NewBet, handleNewBet);
+
+        es.onerror = (e) => {
+            console.error("SSE error", e);
+        };
+
+        return () => es.close();
+    }, [userID, betPage, betStatus]);
+
+    useEffect(() => {
+        const es = api.sseMarkets();
+
+        const handleMarketUpdated = async (e: MessageEvent) => {
+            const { id: idFromWS } = JSON.parse(e.data);
+
+            for (let i = 0; i < markets.length; i++) {
+                if (markets[i].id === idFromWS) {
+                    refetchMarkets();
+                    break;
+                }
+            }
+        };
+
+        const handleNewMarket = async (e: MessageEvent) => {
+            const { market } = JSON.parse(e.data);
+
+            if (market?.creator?.id === userID) {
+                refetchMarkets();
+            }
+        };
+
+        es.addEventListener(ESMarketEvent.MarketUpdated, handleMarketUpdated);
+        es.addEventListener(ESMarketEvent.NewMarket, handleNewMarket);
+
+        es.onerror = (e) => {
+            console.error("SSE error", e);
+        };
+
+        return () => es.close();
+    }, [markets, userID, marketsPage, marketStatus]);
+    const toggleDeveloperMode = () => {
+        const newMode = !developerMode
+        localStorage.setItem('developerMode', String(newMode))
+        setDeveloperMode(newMode)
+    }
     return (
         <div className="bg-background min-h-screen">
             <div className="mx-auto px-4 py-8 max-w-4xl">
-                {/* User Header */}
                 <Card className="mb-6">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-3">
-                            <div className="flex justify-center items-center bg-muted rounded-full w-12 h-12">
-                                <span className="font-bold text-muted-foreground text-lg">
-                                    {user.username.charAt(0).toUpperCase()}
-                                </span>
-                            </div>
-                            <div>
-                                <h1 className="font-bold text-xl">{user.username}</h1>
-                                <p className="font-normal text-muted-foreground text-sm">{user.email}</p>
-                            </div>
-                        </CardTitle>
+                        <div className="flex justify-between items-start">
+                            <CardTitle className="flex items-center gap-3">
+                                <div className="flex justify-center items-center bg-muted rounded-full w-12 h-12">
+                                    <span className="font-bold text-muted-foreground text-lg">
+                                        {user.username.charAt(0).toUpperCase()}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h1 className="font-bold text-xl">{user.username}</h1>
+                                    <p className="font-normal text-muted-foreground text-sm">{user.email}</p>
+                                </div>
+                            </CardTitle>
+                            {sameUser &&
+
+                                <div className="flex items-center gap-2">
+                                    <label htmlFor="developer-mode" className="text-muted-foreground text-sm">
+                                        Developer Mode
+                                    </label>
+                                    <Switch
+                                        id="developer-mode"
+                                        checked={developerMode}
+                                        onCheckedChange={toggleDeveloperMode}
+                                    />
+                                </div>
+                            }
+
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="flex gap-6 text-sm">
@@ -74,13 +287,16 @@ function RouteComponent() {
                                 <span className="font-medium">{resolvedBets.length}</span>
                             </div>
                             <div>
+                                <span className="text-muted-foreground">Balance:</span>{" "}
+                                <span className="font-medium">{user.balance.toFixed(2)}$</span>
+                            </div>
+                            <div>
                                 <span className="text-muted-foreground">Win Rate:</span>{" "}
                                 <span className="font-medium">
                                     {resolvedBets.length > 0
                                         ? `${Math.round(
                                             (resolvedBets.filter((b) => b.market.resolvedOutcomeId === b.outcome.id).length /
-                                                resolvedBets.length) *
-                                            100
+                                                resolvedBets.length) * 100
                                         )}%`
                                         : "N/A"}
                                 </span>
@@ -89,175 +305,65 @@ function RouteComponent() {
                     </CardContent>
                 </Card>
 
-                {/* Bets Tabs */}
-                <Tabs defaultValue="active">
+
+
+                <Tabs defaultValue='bets'>
                     <TabsList className="mb-4">
-                        <TabsTrigger value="active">Active Bets ({activeBets.length})</TabsTrigger>
-                        <TabsTrigger value="resolved">Resolved Bets ({resolvedBets.length})</TabsTrigger>
+                        <TabsTrigger value="bets">Bets</TabsTrigger>
+                        <TabsTrigger value="markets">Created Markets</TabsTrigger>
+                        {sameUser && developerMode && <TabsTrigger value="api-keys">API Keys</TabsTrigger>}
                     </TabsList>
 
-                    <TabsContent value="active">
+                    <TabsContent value="bets">
                         <BetsList
-                            bets={activeBets}
-                            showResult={false}
-                            emptyMessage="No active bets yet. Place your first bet!"
+                            betStatus={betStatus}
+                            bets={bets}
+                            currentPage={betPage}
+                            totalPages={betsTotalPages}
                         />
                     </TabsContent>
 
-                    <TabsContent value="resolved">
-                        <BetsList
-                            bets={resolvedBets}
-                            showResult={true}
-                            emptyMessage="No resolved bets yet."
+                    <TabsContent value="markets">
+                        <div className="flex gap-4 mb-6">
+                            <Button
+                                variant={!marketStatus ? "default" : "outline"}
+                                onClick={() => navigate({ search: (prev) => { delete prev.marketStatus; return { ...prev, marketsPage: 0 } } })}
+                            >
+                                All Markets
+                            </Button>
+                            <Button
+                                variant={marketStatus === "active" ? "default" : "outline"}
+                                onClick={() => navigate({ search: (prev) => ({ ...prev, marketStatus: "active", marketsPage: 0 }) })}
+                            >
+                                Active Markets
+                            </Button>
+                            <Button
+                                variant={marketStatus === "resolved" ? "default" : "outline"}
+                                onClick={() => navigate({ search: (prev) => ({ ...prev, marketStatus: "resolved", marketsPage: 0 }) })}
+                            >
+                                Resolved Markets
+                            </Button>
+                        </div>
+
+                        <MarketsList
+                            markets={markets}
+                            currentPage={marketsPage}
+                            totalPages={marketsTotalPages}
                         />
                     </TabsContent>
+
+                    {sameUser && developerMode && (
+                        <TabsContent value="api-keys">
+                            <ApiKeysTab
+                                currentPage={apiKeyPage}
+                                apiKeys={keys}
+                                totalPages={apiKeysTotalPages}
+                                refetchKeys={refetchKeys}
+                            />
+                        </TabsContent>
+                    )}
                 </Tabs>
             </div>
         </div>
-    );
-}
-function BetsList({
-    bets,
-    showResult = false,
-    emptyMessage,
-}: {
-    bets: BetWithDetails[];
-    showResult?: boolean;
-    emptyMessage: string;
-}) {
-    const [currentPage, setCurrentPage] = useState(0);
-    const navigate = Route.useNavigate();
-
-    const totalPages = Math.ceil(bets.length / ITEMS_PER_USER_PAGE);
-    const paginatedBets = bets.slice(
-        currentPage * ITEMS_PER_USER_PAGE,
-        (currentPage + 1) * ITEMS_PER_USER_PAGE
-    );
-
-    if (bets.length === 0) {
-        return (
-            <Card>
-                <CardContent className="flex justify-center items-center py-12">
-                    <p className="text-muted-foreground">{emptyMessage}</p>
-                </CardContent>
-            </Card>
-        );
-    }
-    function onPageChange(pageAPIValue: number) {
-        navigate({ search: (prev) => ({ ...prev, pageAPIValue }) })
-    }
-    return (
-        <div>
-            <div className="gap-3 grid">
-                {paginatedBets.map((bet) => (
-                    <BetCard key={bet.id} bet={bet} showResult={showResult} />
-                ))}
-            </div>
-            <Pagination className="mt-4">
-                <PaginationContent>
-                    <PaginationItem>
-                        <PaginationPrevious
-                            onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-                            className={currentPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                    </PaginationItem>
-
-                    <PaginationItem>
-                        <PaginationLink
-                            isActive={currentPage === 0}
-                            onClick={() => onPageChange(0)}
-                            className="cursor-pointer"
-                        >
-                            1
-                        </PaginationLink>
-                    </PaginationItem>
-
-                    {currentPage > 3 && (
-                        <PaginationItem>
-                            <PaginationEllipsis />
-                        </PaginationItem>
-                    )}
-
-                    {Array.from({ length: totalPages }, (_, i) => i)
-                        .filter((i) => i !== 0 && i !== totalPages - 1 && Math.abs(i - currentPage) <= 2)
-                        .map((i) => (
-                            <PaginationItem key={i}>
-                                <PaginationLink
-                                    isActive={currentPage === i}
-                                    onClick={() => onPageChange(i)}
-                                    className="cursor-pointer"
-                                >
-                                    {i + 1}
-                                </PaginationLink>
-                            </PaginationItem>
-                        ))}
-
-                    {currentPage < totalPages - 4 && (
-                        <PaginationItem>
-                            <PaginationEllipsis />
-                        </PaginationItem>
-                    )}
-
-                    {totalPages > 1 && (
-                        <PaginationItem>
-                            <PaginationLink
-                                isActive={currentPage === totalPages - 1}
-                                onClick={() => onPageChange(totalPages - 1)}
-                                className="cursor-pointer"
-                            >
-                                {totalPages}
-                            </PaginationLink>
-                        </PaginationItem>
-                    )}
-
-                    <PaginationItem>
-                        <PaginationNext
-                            onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
-                            className={currentPage === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                    </PaginationItem>
-                </PaginationContent>
-            </Pagination>
-        </div>
-    );
-}
-
-function BetCard({ bet, showResult = false }: { bet: BetWithDetails; showResult?: boolean }) {
-    const isWinner = showResult && bet.market.resolvedOutcomeId === bet.outcome.id;
-    const isLoser = showResult && bet.market.resolvedOutcomeId !== bet.outcome.id;
-
-    // Calculate current odds (placeholder - replace with real-time data)
-    const currentOdds = bet.outcome.totalBets
-        ? ((bet.market.totalMarketBets ?? 0) / bet.outcome.totalBets).toFixed(2)
-        : "N/A";
-
-    return (
-        <Card className="bg-card">
-            <CardContent className="pt-4">
-                <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm truncate">{bet.market.title}</h3>
-                        <p className="mt-1 text-muted-foreground text-xs">
-                            Your pick: <span className="font-medium text-foreground">{bet.outcome.title}</span>
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                            <span className="text-muted-foreground text-xs">Amount: ${bet.amount}</span>
-                            {!showResult && (
-                                <span className="text-muted-foreground text-xs">Odds: {currentOdds}x</span>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                        {showResult ? (
-                            <Badge variant={isWinner ? "default" : "destructive"} className={isWinner ? "bg-emerald-600" : ""}>
-                                {isWinner ? "Won" : "Lost"}
-                            </Badge>
-                        ) : (
-                            <Badge variant="secondary">Active</Badge>
-                        )}
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
     );
 }

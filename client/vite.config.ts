@@ -9,8 +9,22 @@ import { nitro } from "nitro/vite";
 const config = defineConfig({
   plugins: [
     devtools(),
-    nitro(),
-    // this is the plugin that enables path aliases
+    nitro({
+      routeRules: {
+        '/api/markets/public/**': {
+          proxy: `${process.env.VITE_API_URL || 'http://localhost:4001'}/api/markets/public/**`,
+        },
+
+        '/api/markets/sse/**': {
+          proxy: `${process.env.VITE_API_URL || 'http://localhost:4001'}/api/markets/sse/**`,
+        },
+        '/api/users/sse/**': {
+          proxy: `${process.env.VITE_API_URL || 'http://localhost:4001'}/api/users/sse/**`,
+        },
+
+      },
+
+    }),
     viteTsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
@@ -18,6 +32,9 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+
+
+
 });
 
 export default config;

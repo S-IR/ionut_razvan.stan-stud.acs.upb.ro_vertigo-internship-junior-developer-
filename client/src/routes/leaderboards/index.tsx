@@ -1,5 +1,5 @@
-import { api } from '@/lib/api';
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
+import { api, APIError } from '@/lib/api';
+import { createFileRoute, Link, redirect, useRouter } from '@tanstack/react-router'
 import { z } from "zod"
 import {
     Pagination,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/pagination";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award } from "lucide-react";
+import { PaginationControl } from '@/components/user/pagination';
 
 export const Route = createFileRoute('/leaderboards/')({
     component: RouteComponent,
@@ -25,7 +26,18 @@ export const Route = createFileRoute('/leaderboards/')({
             return await api.getLeaderboards(page);
         } catch (error) {
             console.error(error)
-            throw redirect({ to: "/server-error" })
+
+            if (error instanceof APIError) {
+                if (error.status === 401) {
+                    throw redirect({ to: "/auth/login" })
+                } else {
+                    throw redirect({ to: "/server-error" })
+                }
+            } else {
+                throw redirect({ to: "/server-error" })
+            }
+
+
         }
 
     },
@@ -79,9 +91,12 @@ function RouteComponent() {
                             {topUsers.map((user, index) => {
                                 const rank = (page) * ITEMS_PER_PAGE + index + 1;
                                 return (
-                                    <div
-                                        key={user.userId}
-                                        className={`flex items-center justify-between px-4 py-3 ${getRankStyle(rank)}`}
+                                    <Link
+
+                                        to="/users/$userID"
+                                        params={{ userID: user.id }}
+                                        key={user.id}
+                                        className={`flex items-center justify-between px-4 py-3 hover:bg-cyan-950 transition-all duration-300 ${getRankStyle(rank)}`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="flex justify-center items-center w-8 h-8">
@@ -96,42 +111,14 @@ function RouteComponent() {
                                         <span className="font-mono text-sm">
                                             ${Number(user.totalWinnings || 0).toLocaleString()}
                                         </span>
-                                    </div>
+                                    </Link>
                                 );
                             })}
                         </div>
                     </CardContent>
                 </Card>
+                {totalPages > 0 && <PaginationControl currentPage={page} totalPages={totalPages} onPageChange={(val) => navigate({ search: (prev) => ({ ...prev, page: Math.max(0, val) }) })} />}
 
-                {totalPages > 0 &&
-                    <Pagination className="mt-4">
-                        <PaginationContent>
-                            <PaginationItem>
-                                <PaginationPrevious onClick={() => navigate({ search: (prev) => ({ ...prev, page: Math.max(0, page - 1) }) })} />
-                            </PaginationItem>
-                            <PaginationItem>
-                                <PaginationLink isActive={page === 0} onClick={() => navigate({ search: (prev) => ({ ...prev, page: 0 }) })}>1</PaginationLink>
-                            </PaginationItem>
-                            {page > 3 && <PaginationItem><PaginationEllipsis /></PaginationItem>}
-                            {Array.from({ length: totalPages }, (_, i) => i)
-                                .filter(i => i !== 0 && i !== totalPages - 1 && Math.abs(i - page) <= 2)
-                                .map(i => (
-                                    <PaginationItem key={i}>
-                                        <PaginationLink isActive={page === i} onClick={() => navigate({ search: (prev) => ({ ...prev, page: i }) })}>{i + 1}</PaginationLink>
-                                    </PaginationItem>
-                                ))}
-                            {page < totalPages - 4 && <PaginationItem><PaginationEllipsis /></PaginationItem>}
-                            {totalPages > 1 && (
-                                <PaginationItem>
-                                    <PaginationLink isActive={page === totalPages - 1} onClick={() => navigate({ search: (prev) => ({ ...prev, page: totalPages - 1 }) })}>{totalPages}</PaginationLink>
-                                </PaginationItem>
-                            )}
-                            <PaginationItem>
-                                <PaginationNext onClick={() => navigate({ search: (prev) => ({ ...prev, page: Math.min(totalPages - 1, page + 1) }) })} />
-                            </PaginationItem>
-                        </PaginationContent>
-                    </Pagination>
-                }
             </div>
         </div>
     );

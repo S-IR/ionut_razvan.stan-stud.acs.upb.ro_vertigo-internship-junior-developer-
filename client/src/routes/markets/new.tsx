@@ -15,7 +15,7 @@ function CreateMarketPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  if (!isAuthenticated || (user && user.role !== "admin")) {
+  if (!isAuthenticated) {
     navigate({ to: "/auth/login" });
     return null;
   }
