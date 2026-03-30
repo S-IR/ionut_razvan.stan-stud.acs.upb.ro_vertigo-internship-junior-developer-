@@ -2,21 +2,11 @@
 
 import { LabelList, Pie, PieChart } from "recharts";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import { Badge } from "@/components/ui/badge";
 import { TrendingUp } from "lucide-react";
+import type { ChartConfig } from "@/components/ui/chart";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Badge } from "@/components/ui/badge";
 
 export const description = "A pie chart with a label list";
 
@@ -60,10 +50,7 @@ export function RoundedPieChart() {
       <CardHeader className="items-center pb-0">
         <CardTitle>
           Pie Chart
-          <Badge
-            variant="outline"
-            className="text-green-500 bg-green-500/10 border-none ml-2"
-          >
+          <Badge variant="outline" className="text-green-500 bg-green-500/10 border-none ml-2">
             <TrendingUp className="h-4 w-4" />
             <span>5.2%</span>
           </Badge>
@@ -76,9 +63,7 @@ export function RoundedPieChart() {
           className="[&_.recharts-text]:fill-background mx-auto aspect-square max-h-[250px]"
         >
           <PieChart>
-            <ChartTooltip
-              content={<ChartTooltipContent nameKey="visitors" hideLabel />}
-            />
+            <ChartTooltip content={<ChartTooltipContent nameKey="visitors" hideLabel />} />
             <Pie
               data={chartData}
               innerRadius={30}

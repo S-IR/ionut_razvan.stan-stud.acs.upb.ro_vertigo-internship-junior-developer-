@@ -40,7 +40,7 @@ describe("Auth", () => {
     );
 
     expect(res.status).toBe(201);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.id).toBeDefined();
     expect(data.username).toBe(username);
     expect(data.email).toBe(email);
@@ -72,7 +72,7 @@ describe("Auth", () => {
       }),
     );
     expect(res.status).toBe(400);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.errors?.length).toBeGreaterThan(0);
   });
 
@@ -85,7 +85,7 @@ describe("Auth", () => {
       }),
     );
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.id).toBe(userId);
 
     authCookie = getCookie(res, "auth_token")!;
@@ -133,7 +133,7 @@ describe("Markets", () => {
     );
 
     expect(res.status).toBe(201);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.id).toBeDefined();
     expect(data.title).toBe("Will it rain tomorrow?");
     expect(data.outcomes).toHaveLength(2);
@@ -154,14 +154,14 @@ describe("Markets", () => {
       }),
     );
     expect(res.status).toBe(400);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.errors?.length).toBeGreaterThan(0);
   });
 
   it("GET /api/markets/public — lists markets", async () => {
     const res = await app.handle(new Request(`${BASE}/api/markets/public`));
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(Array.isArray(data.markets)).toBe(true); // note: wrapped in { markets, totalPages }
     expect(data.markets.length).toBeGreaterThan(0);
   });
@@ -169,7 +169,7 @@ describe("Markets", () => {
   it("GET /api/markets/public/:id — returns market detail", async () => {
     const res = await app.handle(new Request(`${BASE}/api/markets/public/${marketId}`));
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.id).toBe(marketId);
     expect(data.title).toBe("Will it rain tomorrow?");
     expect(data.description).toBe("Weather prediction");
@@ -207,7 +207,7 @@ describe("Bets", () => {
     );
 
     expect(res.status).toBe(201);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.id).toBeDefined();
     expect(data.userId).toBe(userId);
     expect(data.marketId).toBe(marketId);
@@ -227,7 +227,7 @@ describe("Bets", () => {
       }),
     );
     expect(res.status).toBe(400);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.errors?.length).toBeGreaterThan(0);
   });
 });
@@ -236,7 +236,7 @@ describe("Error handling", () => {
   it("returns 404 JSON for unknown routes", async () => {
     const res = await app.handle(new Request(`${BASE}/nonexistent`));
     expect(res.status).toBe(404);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.error).toBe(undefined);
   });
 });

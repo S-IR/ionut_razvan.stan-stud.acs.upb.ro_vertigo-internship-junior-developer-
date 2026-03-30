@@ -1,26 +1,19 @@
-
-
 /**
  * Validate registration input
  */
-export function validateRegistration(
-  username: string,
-  email: string,
-  password: string,
-): string[] {
+export function validateRegistration(username: string, email: string, password: string): string[] {
   const errors: string[] = [];
 
   if (!username || username.length < 3) {
-    errors.push("username must be at least 3 characters")
+    errors.push("username must be at least 3 characters");
   }
 
   if (!email || !isValidEmail(email)) {
-    errors.push("invalid email address")
-
+    errors.push("invalid email address");
   }
 
   if (!password || password.length < 6) {
-    errors.push("password must be at least 6 characters")
+    errors.push("password must be at least 6 characters");
   }
 
   return errors;
@@ -33,11 +26,11 @@ export function validateLogin(email: string, password: string): string[] {
   const errors: string[] = [];
 
   if (!email || !isValidEmail(email)) {
-    errors.push("invalid email address")
+    errors.push("invalid email address");
   }
 
   if (!password) {
-    errors.push("password is required")
+    errors.push("password is required");
   }
 
   return errors;
@@ -54,17 +47,15 @@ export function validateMarketCreation(
   const errors: string[] = [];
 
   if (!title || title.length < 5) {
-    errors.push("market title must be at least 5 characters")
+    errors.push("market title must be at least 5 characters");
   }
 
   if (outcomes.length < 2) {
-    errors.push("market must have at least 2 outcomes")
-
+    errors.push("market must have at least 2 outcomes");
   }
 
   if (outcomes.some((o) => !o || o.length === 0)) {
-    errors.push("all outcomes must have a title")
-
+    errors.push("all outcomes must have a title");
   }
 
   return errors;
@@ -78,7 +69,7 @@ export function validateBet(amount: number | string): string[] {
   const numAmount = Number(amount);
 
   if (isNaN(numAmount) || numAmount <= 0) {
-    errors.push("bet amount must be a positive number")
+    errors.push("bet amount must be a positive number");
   }
 
   return errors;

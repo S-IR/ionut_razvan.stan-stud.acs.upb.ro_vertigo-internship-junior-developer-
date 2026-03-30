@@ -43,8 +43,5 @@ if (import.meta.main) {
 }
 cron.schedule("0 * * * *", async () => {
   const now = new Date();
-  await db
-    .delete(apiKeysTable)
-    .where(lt(apiKeysTable.expiresAt, now));
-
+  await db.delete(apiKeysTable).where(lt(apiKeysTable.expiresAt, now));
 });

@@ -1,9 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/users/not-found')({
-    component: RouteComponent,
-})
+export const Route = createFileRoute("/users/not-found")({
+  component: RouteComponent,
+});
 
 function RouteComponent() {
-    return <div>user not found</div>
+  return <div>user not found</div>;
 }

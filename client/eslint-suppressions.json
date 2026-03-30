@@ -1,0 +1,52 @@
+{
+  "src/components/ui/chart.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 4
+    }
+  },
+  "src/components/ui/field.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/components/user/api-keys.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/components/user/bets.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/lib/api.ts": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/routes/__root.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "src/routes/auth/login.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    }
+  },
+  "src/routes/auth/register.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 4
+    }
+  },
+  "src/routes/markets/$id.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 2
+    }
+  },
+  "src/routes/users/$userID.tsx": {
+    "@typescript-eslint/no-unnecessary-condition": {
+      "count": 1
+    }
+  }
+}

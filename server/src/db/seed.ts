@@ -5,12 +5,9 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema";
 import { hashPassword } from "../lib/auth";
 
-const db = drizzle(
-  new Database(process.env.DB_FILE_NAME || "database.sqlite"),
-  {
-    schema,
-  },
-);
+const db = drizzle(new Database(process.env.DB_FILE_NAME || "database.sqlite"), {
+  schema,
+});
 
 const USER_COUNT = 5_000;
 const MARKET_COUNT = 3_000;
@@ -26,19 +23,12 @@ const MARKET_CATEGORIES = [
   "weather",
 ] as const;
 const YES_NO_OUTCOMES = ["Yes", "No"];
-const MARKET_STATUS_OPTIONS = [
-  "active",
-  "active",
-  "active",
-  "resolved",
-] as const;
+const MARKET_STATUS_OPTIONS = ["active", "active", "active", "resolved"] as const;
 
 type MarketStatus = (typeof MARKET_STATUS_OPTIONS)[number];
 
 type UserInsert = typeof schema.usersTable.$inferInsert;
 type UserRow = typeof schema.usersTable.$inferSelect;
-type MarketInsert = typeof schema.marketsTable.$inferInsert;
-type MarketOutcomeInsert = typeof schema.marketOutcomesTable.$inferInsert;
 type BetInsert = typeof schema.betsTable.$inferInsert;
 
 type SeededUser = {
@@ -79,17 +69,14 @@ function createRandomUser(runId: string, index: number): UserInsert {
   const sex = faker.person.sexType();
   const firstName = faker.person.firstName(sex);
   const lastName = faker.person.lastName();
-  const usernameBase = `${firstName}.${lastName}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ".");
+  const usernameBase = `${firstName}.${lastName}`.toLowerCase().replace(/[^a-z0-9]+/g, ".");
   const username = `${usernameBase}.${runId}.${index}`;
   const email = faker.internet.email({
     firstName,
     lastName,
     provider: "seed.local",
   });
-  const normalizedEmail =
-    `${email.split("@")[0]}.${runId}.${index}@seed.local`.toLowerCase();
+  const normalizedEmail = `${email.split("@")[0]}.${runId}.${index}@seed.local`.toLowerCase();
 
   return {
     username,
@@ -162,10 +149,7 @@ function createMarketOutcomes(category: (typeof MARKET_CATEGORIES)[number]) {
     ]);
   }
 
-  return faker.helpers.arrayElement([
-    YES_NO_OUTCOMES,
-    ["Yes", "No", "Unclear"],
-  ]);
+  return faker.helpers.arrayElement([YES_NO_OUTCOMES, ["Yes", "No", "Unclear"]]);
 }
 
 function createRandomMarket(): GeneratedMarket {
@@ -233,10 +217,7 @@ async function insertUsers() {
   const insertedUsers: UserRow[] = [];
 
   for (const batch of chunkArray(userValues, USER_INSERT_BATCH_SIZE)) {
-    const created = await db
-      .insert(schema.usersTable)
-      .values(batch)
-      .returning();
+    const created = await db.insert(schema.usersTable).values(batch).returning();
     insertedUsers.push(...created);
   }
 

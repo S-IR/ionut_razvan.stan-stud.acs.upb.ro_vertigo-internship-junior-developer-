@@ -1,15 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, createFileRoute, redirect, useRouter, Link } from "@tanstack/react-router";
+import {
+  Link,
+  createFileRoute,
+  redirect,
+  useNavigate,
+  useParams,
+  useRouter,
+} from "@tanstack/react-router";
+import { ArrowLeft, Router } from "lucide-react";
+import { LabelList, Pie, PieChart } from "recharts";
+import { toast } from "sonner";
+import type { ChartConfig } from "@/components/ui/chart";
 import { useAuth } from "@/lib/auth-context";
-import { api, Market, ESMarketEvent } from "@/lib/api";
+import { ESMarketEvent, Market, api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Router } from "lucide-react";
-import { LabelList, Pie, PieChart } from "recharts";
-import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -18,13 +26,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { assert } from "@/lib/utils";
+
 const CHART_COLORS = [
   "var(--chart-1)",
   "var(--chart-2)",
@@ -38,12 +42,12 @@ function MarketDetailPage() {
   const market = Route.useLoaderData();
   const router = useRouter();
 
-  assert(!!market.outcomes && market.outcomes.length > 0)
+  // assert(!!market.outcomes && market.outcomes.length > 0)
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<number | null>(
-    market?.outcomes?.length > 0 ? market.outcomes[0].id : null
+    market.outcomes.length > 0 ? market.outcomes[0].id : null,
   );
   useEffect(() => {
-    setSelectedOutcomeId(market?.outcomes?.length > 0 ? market.outcomes[0].id : null)
+    setSelectedOutcomeId(market?.outcomes?.length > 0 ? market.outcomes[0].id : null);
   }, [market.outcomes]);
 
   const [betAmount, setBetAmount] = useState("");
@@ -57,18 +61,16 @@ function MarketDetailPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-
     const check = () => setIsSmall(window.innerWidth <= 650);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
-
   useEffect(() => {
     const es = api.sseMarkets(id);
 
-    const handleUpdate = async (e: MessageEvent) => {
+    const handleUpdate = (e: MessageEvent) => {
       const { id: idFromWS } = JSON.parse(e.data);
 
       if (idFromWS === id) {
@@ -111,8 +113,6 @@ function MarketDetailPage() {
     return config;
   }, [market.outcomes]);
 
-
-
   const handlePlaceBet = async () => {
     setError(null);
 
@@ -130,12 +130,12 @@ function MarketDetailPage() {
     try {
       setIsBetting(true);
       await api.placeBet(market.id, selectedOutcomeId, amount).then(() => {
-        router.invalidate()
+        router.invalidate();
         setBetAmount("");
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to place bet"
-      setError(msg)
+      const msg = err instanceof Error ? err.message : "Failed to place bet";
+      setError(msg);
       // setError(err instanceof Error ? err.message : "Failed to place bet");
     } finally {
       setIsBetting(false);
@@ -151,8 +151,9 @@ function MarketDetailPage() {
     try {
       await api.closeMarket(id, selectedOutcomeId);
       router.invalidate();
-    } catch (error) {
+    } catch (catchError) {
       setError("could not close the market. please try again later");
+      throw catchError;
     } finally {
       setShowConfirm(false);
     }
@@ -186,7 +187,6 @@ function MarketDetailPage() {
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-
         </Link>
 
         {/* Market Header */}
@@ -207,22 +207,25 @@ function MarketDetailPage() {
                   Market id: <span className="text -foreground">{id}</span>
                 </p>
               </div>
-              <Badge className="top-2 left-2 absolute rounded-md! w-16! h-6!" variant={market.status === "active" ? "default" : "secondary"}>
+              <Badge
+                className="top-2 left-2 absolute rounded-md! w-16! h-6!"
+                variant={market.status === "active" ? "default" : "secondary"}
+              >
                 {market.status === "active" ? "Active" : "Resolved"}
               </Badge>
-              {user?.role === "admin" &&
+              {user?.role === "admin" && (
                 <Button onClick={() => setShowConfirm(true)} variant="cyan">
                   Close Market
                 </Button>
-              }
-
+              )}
 
               <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Close market?</DialogTitle>
                     <DialogDescription>
-                      This will resolve the market with the selected outcome. This action cannot be undone.
+                      This will resolve the market with the selected outcome. This action cannot be
+                      undone.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
@@ -235,7 +238,6 @@ function MarketDetailPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-
             </div>
           </CardHeader>
         </Card>
@@ -248,9 +250,9 @@ function MarketDetailPage() {
               <CardDescription>Percentage of total bets per outcome</CardDescription>
             </CardHeader>
             <CardContent>
-              {market.totalMarketBets === 0 ?
+              {market.totalMarketBets === 0 ? (
                 <div>0 bets have been placed</div>
-                :
+              ) : (
                 <ChartContainer
                   config={chartConfig}
                   className="[&_.recharts-text]:fill-foreground mx-auto max-h-[250px] aspect-square"
@@ -275,7 +277,7 @@ function MarketDetailPage() {
                       cornerRadius={8}
                       paddingAngle={4}
                       innerRadius={isSmall ? 10 : 30}
-                    // outerRadius={isSmall ? 100 : 80}
+                      // outerRadius={isSmall ? 100 : 80}
                     >
                       <LabelList
                         dataKey="percentage"
@@ -292,8 +294,7 @@ function MarketDetailPage() {
                     </Pie>
                   </PieChart>
                 </ChartContainer>
-
-              }
+              )}
 
               {/* Legend */}
               <div className="flex justify-center gap-4 mt-4">
@@ -301,7 +302,9 @@ function MarketDetailPage() {
                   <div key={outcome.id} className="flex items-center gap-2">
                     <div
                       className="rounded-sm w-3 h-3"
-                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      style={{
+                        backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                      }}
                     />
                     <span className="text-muted-foreground text-sm">{outcome.title}</span>
                   </div>
@@ -320,21 +323,23 @@ function MarketDetailPage() {
               {market.outcomes.map((outcome, index) => (
                 <button
                   key={outcome.id}
-                  className={`p-3 w-full rounded-lg border transition-colors cursor-pointer ${selectedOutcomeId === outcome.id
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-muted-foreground/50"
-                    }`}
+                  className={`p-3 w-full rounded-lg border transition-colors cursor-pointer ${
+                    selectedOutcomeId === outcome.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-muted-foreground/50"
+                  }`}
                   onClick={() => market.status === "active" && setSelectedOutcomeId(outcome.id)}
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <div
                         className="rounded-sm w-2.5 h-2.5"
-                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                        style={{
+                          backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                        }}
                       />
                       <span className="font-medium text-sm">{outcome.title}</span>
                       {/* <span className="from-teal-200 font-medium text-xs">odds: {outcome.odds} </span> */}
-
                     </div>
                     <span className="font-bold text-xl">{outcome.odds}</span>
                   </div>
@@ -348,7 +353,9 @@ function MarketDetailPage() {
               <div className="pt-3 border-border border-t">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground text-sm">Total Market Value</span>
-                  <span className="font-bold text-lg">${market.totalMarketBets.toLocaleString()}</span>
+                  <span className="font-bold text-lg">
+                    ${market.totalMarketBets.toLocaleString()}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -430,13 +437,12 @@ export const Route = createFileRoute("/markets/$id")({
     },
   },
 
-
   loader: async ({ params }) => {
     try {
       return await api.getMarket(params.id);
     } catch (error) {
-      console.log(error)
-      throw redirect({ to: "/server-error" })
+      console.log(error);
+      throw redirect({ to: "/server-error" });
     }
   },
 });

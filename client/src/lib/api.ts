@@ -1,7 +1,7 @@
+import { assert } from "../lib/utils";
 
-import { assert } from "../lib/utils"
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4001";
-const LISTEN_TO_ALL_UPDATES_ID = -1
+const LISTEN_TO_ALL_UPDATES_ID = -1;
 
 export interface Market {
   id: number;
@@ -9,11 +9,11 @@ export interface Market {
   description?: string;
   status: MarketStatus;
   creator?: string;
-  outcomes: MarketOutcome[];
+  outcomes: Array<MarketOutcome>;
   totalMarketBets: number;
 }
-export const MarketStatuses = ["active", "resolved"] as const
-export type MarketStatus = typeof MarketStatuses[number]
+export const MarketStatuses = ["active", "resolved"] as const;
+export type MarketStatus = (typeof MarketStatuses)[number];
 export interface MarketWithoutOutcomes {
   totalBetSize: number;
   id: number;
@@ -37,7 +37,7 @@ export interface User {
   balance: number;
   username: string;
   email: string;
-  role: "admin" | "normal"
+  role: "admin" | "normal";
 }
 
 export interface Bet {
@@ -61,20 +61,20 @@ export enum MARKETS_SORT_BY_OPTION {
   TotalBetSizeAsc = "TotalBetSizeAscending",
   TotalBetSizeDesc = "TotalBetSizeDescending",
   NumOfParticipantsAsc = "NumOfParticipantsAscending",
-  NumOfParticipantsDesc = "NumOfParticipantsDescending"
+  NumOfParticipantsDesc = "NumOfParticipantsDescending",
 }
 export type BetWithDetails = Bet & {
   market: Market & { resolvedOutcomeId: number | null };
   outcome: MarketOutcome;
-  status: "won" | "lost" | "ongoing"
-}
+  status: "won" | "lost" | "ongoing";
+};
 export enum ESMarketEvent {
   NewMarket = "new-market",
-  MarketUpdated = "market-updated"
+  MarketUpdated = "market-updated",
 }
 export enum ESUserEvent {
   UserUpdated = "user-updated",
-  NewBet = "bet-new"
+  NewBet = "bet-new",
 }
 
 interface LeaderboardUser {
@@ -91,8 +91,8 @@ export class APIError extends Error {
   }
 }
 
-export const BET_STATUSES = ["ongoing", "won", "lost"] as const
-export type BetStatus = typeof BET_STATUSES[number]
+export const BET_STATUSES = ["ongoing", "won", "lost"] as const;
+export type BetStatus = (typeof BET_STATUSES)[number];
 class ApiClient {
   public baseUrl: string;
 
@@ -152,7 +152,6 @@ class ApiClient {
     return this.request("/api/auth/me", options);
   }
 
-
   async getUser(id: number): Promise<User> {
     return this.request(`/api/users/${encodeURIComponent(id.toString())}`);
   }
@@ -160,9 +159,13 @@ class ApiClient {
     return this.request("/api/auth/logout", { method: "POST" });
   }
 
-  async listMarkets(status: MarketStatus = "active", page: number, sortOptions: MARKETS_SORT_BY_OPTION[]): Promise<{ totalPages: number; markets: Market[] }> {
+  async listMarkets(
+    status: MarketStatus = "active",
+    page: number,
+    sortOptions: Array<MARKETS_SORT_BY_OPTION>,
+  ): Promise<{ totalPages: number; markets: Array<Market> }> {
     const params = new URLSearchParams({ status, page: page.toString() });
-    sortOptions.forEach(opt => params.append("sort", opt));
+    sortOptions.forEach((opt) => params.append("sort", opt));
     return this.request(`/api/markets/public?${params.toString()}`);
   }
 
@@ -170,7 +173,7 @@ class ApiClient {
     return this.request(`/api/markets/public/${id}`);
   }
 
-  async createMarket(title: string, description: string, outcomes: string[]): Promise<Market> {
+  async createMarket(title: string, description: string, outcomes: Array<string>): Promise<Market> {
     return this.request("/api/markets/public", {
       method: "POST",
       body: JSON.stringify({ title, description, outcomes }),
@@ -178,7 +181,7 @@ class ApiClient {
   }
 
   async placeBet(marketId: number, outcomeId: number, amount: number): Promise<Bet> {
-    assert(amount != 0)
+    assert(amount != 0);
 
     return this.request(`/api/markets/public/${marketId}/bets`, {
       method: "POST",
@@ -195,64 +198,79 @@ class ApiClient {
     });
   }
 
-  async getUserBets(id: number, page: number, status?: BetStatus, extraOptions: RequestInit = {}): Promise<{ bets: BetWithDetails[], totalPages: number }> {
-    assert(page >= 0)
+  async getUserBets(
+    id: number,
+    page: number,
+    status?: BetStatus,
+    extraOptions: RequestInit = {},
+  ): Promise<{ bets: Array<BetWithDetails>; totalPages: number }> {
+    assert(page >= 0);
 
     const params = new URLSearchParams({ page: page.toString() });
 
     if (status) {
-      params.append("status", status)
+      params.append("status", status);
     }
-    return this.request(`/api/users/bets/${id}?${params.toString()}`, extraOptions)
+    return this.request(`/api/users/bets/${id}?${params.toString()}`, extraOptions);
   }
 
-
-  async getUserMarkets(id: number, page: number, status?: Market["status"], extraOptions: RequestInit = {}): Promise<{ markets: MarketWithoutOutcomes[], totalPages: number }> {
-    assert(page >= 0)
+  async getUserMarkets(
+    id: number,
+    page: number,
+    status?: Market["status"],
+    extraOptions: RequestInit = {},
+  ): Promise<{ markets: Array<MarketWithoutOutcomes>; totalPages: number }> {
+    assert(page >= 0);
 
     const params = new URLSearchParams({ page: page.toString() });
 
     if (status) {
-      params.append("status", status)
+      params.append("status", status);
     }
-    return this.request(`/api/users/markets/${id}?${params.toString()}`, extraOptions)
+    return this.request(`/api/users/markets/${id}?${params.toString()}`, extraOptions);
   }
-  async getLeaderboards(page: number, extraOptions: RequestInit = {}): Promise<{ totalPages: number, topUsers: LeaderboardUser[] }> {
+  async getLeaderboards(
+    page: number,
+    extraOptions: RequestInit = {},
+  ): Promise<{ totalPages: number; topUsers: Array<LeaderboardUser> }> {
     return this.request(`/api/users/leaderboards?page=${encodeURIComponent(page)}`, extraOptions);
-
   }
-  async getUserApiKeys(page: number, extraOptions: RequestInit = {}): Promise<{ keys: APIKey[], totalPages: number }> {
-    assert(page >= 0)
-    return this.request(`/api/users/api-keys?page=${encodeURIComponent(page)}`, extraOptions)
+  async getUserApiKeys(
+    page: number,
+    extraOptions: RequestInit = {},
+  ): Promise<{ keys: Array<APIKey>; totalPages: number }> {
+    assert(page >= 0);
+    return this.request(`/api/users/api-keys?page=${encodeURIComponent(page)}`, extraOptions);
   }
   async createAPIKey(name: string, dateISOString: string): Promise<{ key: string }> {
-    assert(name.length > 0)
-    assert(dateISOString.length > 0)
-    const expiresAt = new Date(dateISOString)
-    assert(expiresAt && !isNaN(expiresAt.getTime()))
-    assert(expiresAt > new Date())
+    assert(name.length > 0);
+    assert(dateISOString.length > 0);
+    const expiresAt = new Date(dateISOString);
+    assert(expiresAt && !isNaN(expiresAt.getTime()));
+    assert(expiresAt > new Date());
     return this.request("/api/users/api-keys", {
       method: "POST",
       body: JSON.stringify({
-        name, expiresAt
-      })
-    })
+        name,
+        expiresAt,
+      }),
+    });
   }
 
   async deleteAPIKey(id: number) {
     return this.request(`/api/users/api-keys/${id}`, {
-      method: "DELETE"
-    })
+      method: "DELETE",
+    });
   }
 
   sseMarkets(marketID?: number): EventSource {
     return new EventSource(
-      `/api/markets/sse/${marketID !== undefined ? marketID : LISTEN_TO_ALL_UPDATES_ID}`
+      `/api/markets/sse/${marketID !== undefined ? marketID : LISTEN_TO_ALL_UPDATES_ID}`,
     );
   }
   sseUsers(userID?: number): EventSource {
     return new EventSource(
-      `/api/users/sse/${userID !== undefined ? userID : LISTEN_TO_ALL_UPDATES_ID}`
+      `/api/users/sse/${userID !== undefined ? userID : LISTEN_TO_ALL_UPDATES_ID}`,
     );
   }
 }
@@ -281,4 +299,3 @@ export function endRequest() {
   notify();
 }
 export const api = new ApiClient(API_BASE_URL);
-

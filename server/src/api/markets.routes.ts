@@ -1,32 +1,10 @@
 import { Elysia, t } from "elysia";
 import { authMiddleware, requireAuth } from "../middleware/auth.middleware";
-import {
-  gte,
-  sql,
-  type BuildQueryResult,
-  type DBQueryConfig,
-  type ExtractTablesWithRelations,
-} from "drizzle-orm";
+import { gte, sql, type BuildQueryResult, type ExtractTablesWithRelations } from "drizzle-orm";
 import * as schema from "../db/schema";
-import {
-  eq,
-  and,
-  sum,
-  countDistinct,
-  asc,
-  desc,
-  inArray,
-  SQL,
-  count,
-} from "drizzle-orm";
+import { eq, and, sum, countDistinct, asc, desc, inArray, SQL, count } from "drizzle-orm";
 import db from "../db";
-import {
-  usersTable,
-  marketsTable,
-  marketOutcomesTable,
-  betsTable,
-} from "../db/schema";
-import { type AuthTokenPayload } from "../lib/auth";
+import { usersTable, marketsTable, marketOutcomesTable, betsTable } from "../db/schema";
 import { validateMarketCreation, validateBet } from "../lib/validation";
 import {
   assert,
@@ -102,7 +80,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
 
   .get(
     "/public",
-    async ({ query, set }) => {
+    async ({ query }) => {
       const statusFilter: "active" | "resolved" =
         query.status === "resolved" ? "resolved" : "active";
 
@@ -162,10 +140,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
                 totalBets: sum(betsTable.amount),
               })
               .from(marketOutcomesTable)
-              .leftJoin(
-                betsTable,
-                eq(betsTable.outcomeId, marketOutcomesTable.id),
-              )
+              .leftJoin(betsTable, eq(betsTable.outcomeId, marketOutcomesTable.id))
               .where(inArray(marketOutcomesTable.marketId, marketIds))
               .groupBy(marketOutcomesTable.id)
           : [];
@@ -183,8 +158,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
 
           const enrichedOutcomes = currOutcomes.map((o) => {
             const totalBets = Number(o.totalBets) || 0;
-            const odds =
-              oddsList.find((odd) => odd.outcomeId === o.id)?.odds ?? 0;
+            const odds = oddsList.find((odd) => odd.outcomeId === o.id)?.odds ?? 0;
             if (process.env.ENV === "DEV")
               assertEnrichedOutcome({
                 id: o.id,
@@ -210,9 +184,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
     },
     {
       query: t.Object({
-        status: t.Optional(
-          t.Union(schema.MARKET_STATUSES.map((s) => t.Literal(s))),
-        ),
+        status: t.Optional(t.Union(schema.MARKET_STATUSES.map((s) => t.Literal(s)))),
         page: t.Number({ minimum: 0, default: 0 }),
         sort: t.Array(t.Enum(SORT_BY_OPTION), { default: [] }),
       }),
@@ -241,10 +213,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
 
       if (process.env.ENV === "DEV") {
         assertMarket(market);
-        assert(
-          typeof market.creator?.username === "string" &&
-            market.creator.username !== "",
-        );
+        assert(typeof market.creator?.username === "string" && market.creator.username !== "");
         assert(Array.isArray(market.outcomes));
         market.outcomes.forEach(assertOutcome);
       }
@@ -261,10 +230,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       const betsMap = new Map<number, number>(
         betsPerOutcome.map((b) => [b.outcomeId, Number(b.totalBets) || 0]),
       );
-      const totalMarketBets = Array.from(betsMap.values()).reduce(
-        (sum, v) => sum + v,
-        0,
-      );
+      const totalMarketBets = Array.from(betsMap.values()).reduce((sum, v) => sum + v, 0);
 
       const oddsList = await calculateOdds(params.id);
 
@@ -399,10 +365,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       }
 
       const existingBet = await db.query.betsTable.findFirst({
-        where: and(
-          eq(betsTable.userId, user.id),
-          eq(betsTable.marketId, marketId),
-        ),
+        where: and(eq(betsTable.userId, user.id), eq(betsTable.marketId, marketId)),
       });
       if (existingBet && existingBet.outcomeId !== outcomeId) {
         set.status = 400;
@@ -430,9 +393,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
         const [updatedUser] = await tx
           .update(usersTable)
           .set({ balance: sql`${usersTable.balance} - ${amount}` })
-          .where(
-            and(eq(usersTable.id, user.id), gte(usersTable.balance, amount)),
-          )
+          .where(and(eq(usersTable.id, user.id), gte(usersTable.balance, amount)))
           .returning({ newBalance: usersTable.balance });
 
         if (!updatedUser) {
@@ -491,10 +452,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
 
       if (process.env.ENV === "DEV") {
         assert(typeof params.id === "number" && params.id >= 0);
-        assert(
-          typeof body.resolvedOutcomeId === "number" &&
-            body.resolvedOutcomeId >= 0,
-        );
+        assert(typeof body.resolvedOutcomeId === "number" && body.resolvedOutcomeId >= 0);
       }
 
       if (user.role !== "admin") {
@@ -521,9 +479,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
         market.outcomes.forEach(assertOutcome);
       }
 
-      const validOutcome = market.outcomes.find(
-        (o) => o.id === body.resolvedOutcomeId,
-      );
+      const validOutcome = market.outcomes.find((o) => o.id === body.resolvedOutcomeId);
       if (!validOutcome) {
         set.status = 400;
         return { errors: ["Unknown outcome id for this market"] };
@@ -533,13 +489,8 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
         where: eq(betsTable.marketId, params.id),
       });
       const totalPool = allBets.reduce((sum, bet) => sum + bet.amount, 0);
-      const winningBets = allBets.filter(
-        (bet) => bet.outcomeId === body.resolvedOutcomeId,
-      );
-      const totalWinningStakes = winningBets.reduce(
-        (sum, bet) => sum + bet.amount,
-        0,
-      );
+      const winningBets = allBets.filter((bet) => bet.outcomeId === body.resolvedOutcomeId);
+      const totalWinningStakes = winningBets.reduce((sum, bet) => sum + bet.amount, 0);
 
       assert(!Number.isNaN(totalPool) && !Number.isNaN(totalWinningStakes));
       assert(totalWinningStakes <= totalPool);
@@ -559,10 +510,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
               const payout = (bet.amount / totalWinningStakes) * totalPool;
               assert(!Number.isNaN(payout) && payout >= 0);
 
-              await tx
-                .update(betsTable)
-                .set({ winnings: payout })
-                .where(eq(betsTable.id, bet.id));
+              await tx.update(betsTable).set({ winnings: payout }).where(eq(betsTable.id, bet.id));
 
               const winner = await tx.query.usersTable.findFirst({
                 where: eq(usersTable.id, bet.userId),
@@ -592,10 +540,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
     },
   );
 
-export async function settleMarket(
-  marketId: number,
-  resolvedOutcomeId: number,
-) {
+export async function settleMarket(marketId: number, resolvedOutcomeId: number) {
   const market = await db.query.marketsTable.findFirst({
     where: eq(marketsTable.id, marketId),
     with: { outcomes: true },
@@ -607,13 +552,8 @@ export async function settleMarket(
   });
 
   const totalPool = allBets.reduce((sum, bet) => sum + bet.amount, 0);
-  const winningBets = allBets.filter(
-    (bet) => bet.outcomeId === resolvedOutcomeId,
-  );
-  const totalWinningStakes = winningBets.reduce(
-    (sum, bet) => sum + bet.amount,
-    0,
-  );
+  const winningBets = allBets.filter((bet) => bet.outcomeId === resolvedOutcomeId);
+  const totalWinningStakes = winningBets.reduce((sum, bet) => sum + bet.amount, 0);
 
   assert(!Number.isNaN(totalPool) && !Number.isNaN(totalWinningStakes));
   assert(totalWinningStakes <= totalPool);
@@ -634,10 +574,7 @@ export async function settleMarket(
 
           assert(!Number.isNaN(payout) && payout >= 0);
 
-          await tx
-            .update(betsTable)
-            .set({ winnings: payout })
-            .where(eq(betsTable.id, bet.id));
+          await tx.update(betsTable).set({ winnings: payout }).where(eq(betsTable.id, bet.id));
 
           await tx
             .update(usersTable)

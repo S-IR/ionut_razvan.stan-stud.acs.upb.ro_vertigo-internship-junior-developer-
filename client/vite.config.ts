@@ -11,19 +11,17 @@ const config = defineConfig({
     devtools(),
     nitro({
       routeRules: {
-        '/api/markets/public/**': {
-          proxy: `${process.env.VITE_API_URL || 'http://localhost:4001'}/api/markets/public/**`,
+        "/api/markets/public/**": {
+          proxy: `${process.env.VITE_API_URL || "http://localhost:4001"}/api/markets/public/**`,
         },
 
-        '/api/markets/sse/**': {
-          proxy: `${process.env.VITE_API_URL || 'http://localhost:4001'}/api/markets/sse/**`,
+        "/api/markets/sse/**": {
+          proxy: `${process.env.VITE_API_URL || "http://localhost:4001"}/api/markets/sse/**`,
         },
-        '/api/users/sse/**': {
-          proxy: `${process.env.VITE_API_URL || 'http://localhost:4001'}/api/users/sse/**`,
+        "/api/users/sse/**": {
+          proxy: `${process.env.VITE_API_URL || "http://localhost:4001"}/api/users/sse/**`,
         },
-
       },
-
     }),
     viteTsConfigPaths({
       projects: ["./tsconfig.json"],
@@ -32,9 +30,6 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
-
-
-
 });
 
 export default config;

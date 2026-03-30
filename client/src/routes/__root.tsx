@@ -1,28 +1,35 @@
-import { HeadContent, Link, Outlet, Scripts, createRootRoute, useRouterState } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Link,
+  Outlet,
+  Scripts,
+  createRootRoute,
+  useRouterState,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { AuthProvider, getMeServerFn } from "@/lib/auth-context";
-import { Toaster } from "@/components/ui/sonner"
-import { Navbar } from "@/components/navbar"
+import { useEffect, useState } from "react";
 import appCss from "../styles.css?url";
+import { AuthProvider, getMeServerFn } from "@/lib/auth-context";
+import { Toaster } from "@/components/ui/sonner";
+import { Navbar } from "@/components/navbar";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { useGlobalLoading } from "@/lib/use-global-load";
-import { useEffect, useState } from "react";
 
 function NotFoundComponent() {
   return (
     <div className="flex justify-center items-center min-h-screen">
       <div className="text-center">
-        <p className="mb-2 font-mali font-semibold text-cyan-200 text-4xl lg:text-8xl">Page Not Found</p>
+        <p className="mb-2 font-mali font-semibold text-cyan-200 text-4xl lg:text-8xl">
+          Page Not Found
+        </p>
         <Link to="/">
           <Button variant="ghost" size="sm" className="gap-2 mb-6">
             {/* <ArrowLeft className="w-4 h-4" /> */}
             Go to the main page
           </Button>
-
         </Link>
-
       </div>
     </div>
   );
@@ -30,7 +37,7 @@ function NotFoundComponent() {
 
 export const Route = createRootRoute({
   loader: async () => {
-    const data = await getMeServerFn()
+    const data = await getMeServerFn();
     return data;
   },
   head: () => ({
@@ -75,7 +82,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const user = Route.useLoaderData();
   const routerLoading = useRouterState({
-    select: (s) => s.isLoading && s.status === "pending" && s.resolvedLocation !== null
+    select: (s) => s.isLoading && s.status === "pending" && s.resolvedLocation !== null,
   });
 
   const apiLoading = useGlobalLoading();
@@ -89,7 +96,7 @@ function RootComponent() {
     if (isLoading) {
       t = setTimeout(() => setVisible(true), 200);
     } else {
-      clearTimeout(t)
+      clearTimeout(t);
       setVisible(false);
     }
 

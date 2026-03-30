@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { useNavigate, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -52,7 +52,7 @@ function CreateMarketPage() {
       }
     },
   });
-  if (authIsLoading) return <></>
+  if (authIsLoading) return <></>;
   return (
     <div className="p-4 min-h-screen">
       <div className="mx-auto max-w-2xl">
@@ -147,7 +147,6 @@ function CreateMarketPage() {
                 </div>
               )}
               <div className="flex gap-4">
-
                 <Button type="submit" className="flex-1" disabled={isLoading}>
                   {isLoading ? "Creating..." : "Create Market"}
                 </Button>

@@ -1,6 +1,5 @@
 import { Elysia, t } from "elysia";
 // import { handleRegister, handleLogin } from "./handlers";
-import { jwt } from "@elysiajs/jwt";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { assert, assertUser } from "../lib/assert";
 import { validateLogin, validateRegistration } from "../lib/validation";
@@ -41,8 +40,7 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
         return { errors };
       }
       const existingUser = await db.query.usersTable.findFirst({
-        where: (users, { or, eq }) =>
-          or(eq(users.email, email), eq(users.username, username)),
+        where: (users, { or, eq }) => or(eq(users.email, email), eq(users.username, username)),
       });
 
       if (existingUser) {
@@ -178,7 +176,7 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       return { errors: ["Unauthorized"] };
     }
     assertUser(user);
-    const { passwordHash, ...safeUser } = user;
+    const { passwordHash: _, ...safeUser } = user;
     return safeUser;
   })
   .post("/logout", ({ cookie: { auth_token } }) => {
