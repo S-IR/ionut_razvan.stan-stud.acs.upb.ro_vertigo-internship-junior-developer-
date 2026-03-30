@@ -5,7 +5,13 @@ import { api, APIError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
 function RegisterPage() {
@@ -31,16 +37,18 @@ function RegisterPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const user = await api.register(values.username, values.email, values.password);
+        const user = await api.register(
+          values.username,
+          values.email,
+          values.password,
+        );
         login(user);
         navigate({ to: "/" });
       } catch (err) {
         if (err instanceof APIError) {
-
           setError(err.message);
         } else {
           setError(err instanceof Error ? err.message : "Registration failed");
-
         }
       } finally {
         setIsLoading(false);
@@ -49,11 +57,13 @@ function RegisterPage() {
   });
 
   return (
-    <div className="flex justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4 min-h-screen">
+    <div className="flex justify-center items-center  p-4 min-h-screen">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2">
           <CardTitle className="text-3xl">Sign Up</CardTitle>
-          <CardDescription>Create your account to start betting</CardDescription>
+          <CardDescription>
+            Create your account to start betting
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -87,7 +97,9 @@ function RegisterPage() {
                     disabled={isLoading}
                   />
                   {field.state.meta.errors && (
-                    <p className="text-destructive text-xs">{field.state.meta.errors.join(", ")}</p>
+                    <p className="text-destructive text-xs">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
                   )}
                 </div>
               )}
@@ -117,7 +129,9 @@ function RegisterPage() {
                     disabled={isLoading}
                   />
                   {field.state.meta.errors && (
-                    <p className="text-destructive text-xs">{field.state.meta.errors.join(", ")}</p>
+                    <p className="text-destructive text-xs">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
                   )}
                 </div>
               )}
@@ -147,7 +161,9 @@ function RegisterPage() {
                     disabled={isLoading}
                   />
                   {field.state.meta.errors && (
-                    <p className="text-destructive text-xs">{field.state.meta.errors.join(", ")}</p>
+                    <p className="text-destructive text-xs">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
                   )}
                 </div>
               )}
@@ -178,7 +194,9 @@ function RegisterPage() {
                     disabled={isLoading}
                   />
                   {field.state.meta.errors && (
-                    <p className="text-destructive text-xs">{field.state.meta.errors.join(", ")}</p>
+                    <p className="text-destructive text-xs">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
                   )}
                 </div>
               )}
@@ -197,7 +215,10 @@ function RegisterPage() {
 
           <div className="mt-6 text-muted-foreground text-sm text-center">
             Already have an account?{" "}
-            <a href="/auth/login" className="font-medium text-primary hover:underline">
+            <a
+              href="/auth/login"
+              className="font-medium text-primary hover:underline"
+            >
               Login
             </a>
           </div>
