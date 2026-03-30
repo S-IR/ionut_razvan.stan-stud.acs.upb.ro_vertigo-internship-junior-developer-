@@ -69,7 +69,7 @@ function RouteComponent() {
     }
 
     return (
-        <div className="bg-background pb-12 min-h-screen text-foreground dark">
+        <div className="bg-background pb-12 min-h-screen text-foreground">
             <div className="mx-auto px-4 py-8 max-w-3xl container">
                 <Card className="mb-6">
                     <CardHeader>

@@ -7,7 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     Pagination, PaginationContent, PaginationEllipsis,
@@ -137,15 +137,11 @@ function RouteComponent() {
     if (betsTotalPages === 0) assert(bets.length === 0)
     if (marketsTotalPages === 0) assert(markets.length === 0)
     if (apiKeysTotalPages === 0) assert(keys.length === 0)
+    const marketsRef = useRef(markets);
+    useEffect(() => {
+        marketsRef.current = markets;
+    }, [markets]);
 
-    // const [bets, setBets] = useState(initialBets)
-    // const [betsTotalPages, setBetsTotalPages] = useState(initialBetsTotalPages)
-
-    // const [markets, setMarkets] = useState(initialMarkets)
-    // const [marketsTotalPages, setMarketsTotalPages] = useState(initialMarketsTotalPages)
-
-    // const [keys, setKeys] = useState(initialApiKeys)
-    // const [apiKeysTotalPages, setApiKeysTotalPages] = useState(initialApiKeysTotalPages)
 
     const [activeBets] = useState(() => bets.filter((bet) => bet.market.status === "active"))
     const [resolvedBets] = useState(() => bets.filter((bet) => bet.market.status === "resolved"))
@@ -205,7 +201,7 @@ function RouteComponent() {
         };
 
         return () => es.close();
-    }, [userID, betPage, betStatus]);
+    }, [userID]);
 
     useEffect(() => {
         const es = api.sseMarkets();
@@ -213,11 +209,8 @@ function RouteComponent() {
         const handleMarketUpdated = async (e: MessageEvent) => {
             const { id: idFromWS } = JSON.parse(e.data);
 
-            for (let i = 0; i < markets.length; i++) {
-                if (markets[i].id === idFromWS) {
-                    refetchMarkets();
-                    break;
-                }
+            if (marketsRef.current.some(m => m.id === idFromWS)) {
+                router.invalidate();
             }
         };
 
@@ -237,7 +230,7 @@ function RouteComponent() {
         };
 
         return () => es.close();
-    }, [markets, userID, marketsPage, marketStatus]);
+    }, [userID]);
     const toggleDeveloperMode = () => {
         const newMode = !developerMode
         localStorage.setItem('developerMode', String(newMode))

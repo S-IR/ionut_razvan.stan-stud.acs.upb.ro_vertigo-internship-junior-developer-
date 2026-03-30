@@ -13,29 +13,26 @@ import {
   Pagination, PaginationContent, PaginationEllipsis,
   PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination"
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function DashboardPage() {
   const { isAuthenticated, user } = useAuth();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const { page, sort, status } = Route.useSearch();
-  // const { markets: startingMarkets, totalPages: startingTotalPages } = Route.useLoaderData();
   const { markets, totalPages } = Route.useLoaderData();
-
-  // const [totalPages, setTotalPages] = useState(startingTotalPages)
-
+  const marketsRef = useRef(markets);
+  useEffect(() => {
+    marketsRef.current = markets;
+  }, [markets]);
   useEffect(() => {
     const es = api.sseMarkets();
 
     const handleMarketUpdated = async (e: MessageEvent) => {
       const { id: idFromWS } = JSON.parse(e.data);
 
-      for (let i = 0; i < markets.length; i++) {
-        if (markets[i].id === idFromWS) {
-          router.invalidate()
-          break;
-        }
+      if (marketsRef.current.some(m => m.id === idFromWS)) {
+        router.invalidate();
       }
     };
 
@@ -53,7 +50,7 @@ function DashboardPage() {
     return () => {
       es.close();
     };
-  }, [page, sort, status]);
+  }, []);
 
 
   if (!isAuthenticated) {

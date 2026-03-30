@@ -34,7 +34,6 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       set.status = 400;
       return { errors };
     }
-    console.log("body", body)
     const existingUser = await db.query.usersTable.findFirst({
       where: (users, { or, eq }) => or(eq(users.email, email), eq(users.username, username)),
     });
@@ -151,9 +150,9 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       return { errors: ["Unauthorized"] };
     }
     assertUser(user)
-    const partialUser: Partial<typeof user> = user
-    delete partialUser.passwordHash
-    return partialUser;
+    // const partialUser: Partial<typeof user> = user
+    const { passwordHash, ...safeUser } = user;
+    return safeUser
   })
   .post("/logout", ({ cookie: { auth_token } }) => {
     auth_token.remove();

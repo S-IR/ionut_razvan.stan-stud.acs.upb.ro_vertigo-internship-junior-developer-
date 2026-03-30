@@ -1,4 +1,4 @@
-import { HeadContent, Outlet, Scripts, createRootRoute, useRouterState } from "@tanstack/react-router";
+import { HeadContent, Link, Outlet, Scripts, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { AuthProvider, getMeServerFn } from "@/lib/auth-context";
@@ -6,20 +6,23 @@ import { Toaster } from "@/components/ui/sonner"
 import { Navbar } from "@/components/navbar"
 import appCss from "../styles.css?url";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { useGlobalLoading } from "@/lib/use-global-load";
+import { useEffect, useState } from "react";
 
 function NotFoundComponent() {
   return (
-    <div className="flex justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div className="flex justify-center items-center min-h-screen">
       <div className="text-center">
-        <h1 className="mb-4 font-bold text-gray-900 text-6xl">404</h1>
-        <p className="mb-2 font-semibold text-gray-700 text-2xl">Page Not Found</p>
-        <p className="mb-8 text-gray-600">The page you are looking for does not exist.</p>
-        <a
-          href="/"
-          className="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg text-white"
-        >
-          Go Home
-        </a>
+        <p className="mb-2 font-mali font-semibold text-cyan-200 text-4xl lg:text-8xl">Page Not Found</p>
+        <Link to="/">
+          <Button variant="ghost" size="sm" className="gap-2 mb-6">
+            {/* <ArrowLeft className="w-4 h-4" /> */}
+            Go to the main page
+          </Button>
+
+        </Link>
+
       </div>
     </div>
   );
@@ -71,11 +74,31 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const user = Route.useLoaderData();
-  const isLoading = useRouterState({ select: (s) => s.isLoading && s.status === "pending" && s.resolvedLocation !== null });
+  const routerLoading = useRouterState({
+    select: (s) => s.isLoading && s.status === "pending" && s.resolvedLocation !== null
+  });
+
+  const apiLoading = useGlobalLoading();
+  const isLoading = routerLoading || apiLoading;
+
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    let t: any;
+
+    if (isLoading) {
+      t = setTimeout(() => setVisible(true), 200);
+    } else {
+      clearTimeout(t)
+      setVisible(false);
+    }
+
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   return (
     <AuthProvider initialUser={user}>
-      {isLoading && (
+      {visible && (
         <div className="z-50 fixed inset-0 flex justify-center items-center bg-black/50">
           <div className="flex flex-col items-center gap-3 bg-white shadow-xl px-10 py-8 rounded-xl">
             <div className="border-4 border-gray-200 border-t-blue-600 rounded-full w-8 h-8 animate-spin" />

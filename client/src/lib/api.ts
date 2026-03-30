@@ -101,32 +101,37 @@ class ApiClient {
   }
 
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
+    startRequest();
 
-    const data = await response.json();
+    try {
+      const url = `${this.baseUrl}${endpoint}`;
+      const response = await fetch(url, {
+        ...options,
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
+      });
 
-    if (!response.ok) {
-      if (data?.errors && Array.isArray(data.errors)) {
-        const msg = data.errors.join(", ");
-        throw new APIError(msg, response.status);
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data?.errors && Array.isArray(data.errors)) {
+          throw new APIError(data.errors.join(", "), response.status);
+        }
+
+        if (data?.message) {
+          throw new APIError(data.message, response.status);
+        }
+
+        throw new APIError("Unknown error", response.status);
       }
 
-      if (data?.message) {
-        throw new APIError(data.message, response.status);
-      }
-
-      throw new APIError("Unknown error", response.status);
+      return data ?? {};
+    } finally {
+      endRequest();
     }
-
-    return data ?? {};
   }
 
   async register(username: string, email: string, password: string): Promise<User> {
@@ -251,5 +256,29 @@ class ApiClient {
     );
   }
 }
+let activeRequests = 0;
+const listeners = new Set<(loading: boolean) => void>();
 
+export function subscribe(cb: (loading: boolean) => void) {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+}
+
+function notify() {
+  const isLoading = activeRequests > 0;
+  listeners.forEach((l) => l(isLoading));
+}
+
+export function startRequest() {
+  activeRequests++;
+  notify();
+}
+
+export function endRequest() {
+  activeRequests--;
+  notify();
+}
 export const api = new ApiClient(API_BASE_URL);
+

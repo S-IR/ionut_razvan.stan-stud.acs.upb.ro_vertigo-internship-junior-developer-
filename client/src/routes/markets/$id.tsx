@@ -35,23 +35,26 @@ function MarketDetailPage() {
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<number | null>(
     market?.outcomes?.length > 0 ? market.outcomes[0].id : null
   );
+  useEffect(() => {
+    setSelectedOutcomeId(market?.outcomes?.length > 0 ? market.outcomes[0].id : null)
+  }, [market.outcomes]);
+
   const [betAmount, setBetAmount] = useState("");
 
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
-  // const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBetting, setIsBetting] = useState(false);
   const [isSmall, setIsSmall] = useState(false);
 
   useEffect(() => {
+
     const check = () => setIsSmall(window.innerWidth <= 650);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // console.log("market", market)
 
   useEffect(() => {
     const es = api.sseMarkets(id);
@@ -69,13 +72,11 @@ function MarketDetailPage() {
     es.onerror = (e) => {
       console.error("SSE error", e);
     };
-
-    return () => es.close();
+    return () => {
+      es.removeEventListener(ESMarketEvent.MarketUpdated, handleUpdate);
+      es.close();
+    };
   }, [id]);
-
-
-
-
 
   const chartData = useMemo(() => {
     return market.outcomes.map((outcome) => ({
@@ -125,8 +126,7 @@ function MarketDetailPage() {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to place bet"
-      toast(msg)
-
+      setError(msg)
       // setError(err instanceof Error ? err.message : "Failed to place bet");
     } finally {
       setIsBetting(false);
@@ -139,7 +139,7 @@ function MarketDetailPage() {
       return
     }
     try {
-      await api.closeMarket(id, selectedOutcomeId)
+      api.closeMarket(id, selectedOutcomeId).then(() => router.invalidate())
     } catch (error) {
       toast("could not close the market. please try again later")
     }
@@ -165,7 +165,7 @@ function MarketDetailPage() {
   //   );
   // }
   return (
-    <div className="min-h-screen dark">
+    <div className="min-h-screen">
       <div className="mx-auto px-4 py-8 max-w-3xl">
         {/* Back Button */}
         <Link to="/">
@@ -281,9 +281,9 @@ function MarketDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {market.outcomes.map((outcome, index) => (
-                <div
+                <button
                   key={outcome.id}
-                  className={`p-3 rounded-lg border transition-colors cursor-pointer ${selectedOutcomeId === outcome.id
+                  className={`p-3 w-full rounded-lg border transition-colors cursor-pointer ${selectedOutcomeId === outcome.id
                     ? "border-primary bg-primary/10"
                     : "border-border hover:border-muted-foreground/50"
                     }`}
@@ -299,12 +299,12 @@ function MarketDetailPage() {
                       <span className="from-teal-200 font-medium text-xs">odds: {outcome.odds} </span>
 
                     </div>
-                    <span className="font-bold text-xl">{outcome.odds}%</span>
+                    <span className="font-bold text-xl">{outcome.odds}</span>
                   </div>
                   <p className="mt-1 ml-4 text-muted-foreground text-xs">
                     ${outcome.totalBets.toLocaleString()} in bets
                   </p>
-                </div>
+                </button>
               ))}
 
               {/* Total Market Value */}
