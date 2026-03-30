@@ -1,6 +1,6 @@
 
 import { api, APIError, APIKey, } from '@/lib/api'
-import { redirect } from '@tanstack/react-router'
+import { Link, redirect } from '@tanstack/react-router'
 import {
     Card,
     CardAction,
@@ -28,7 +28,6 @@ import { Route } from '@/routes/users/$userID'
 import { PaginationControl } from './pagination'
 
 
-
 export function ApiKeysTab({ apiKeys, totalPages, refetchKeys, currentPage }: { apiKeys: APIKey[], currentPage: number, totalPages: number, refetchKeys: () => void }) {
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [keyName, setKeyName] = useState("");
@@ -41,13 +40,21 @@ export function ApiKeysTab({ apiKeys, totalPages, refetchKeys, currentPage }: { 
 
     const navigate = Route.useNavigate();
 
-
+    const [error, setError] = useState("")
 
     const handleCreateKey = async () => {
-        if (!keyName.trim())
-            setIsCreating(true);
+        if (keyName.trim().length === 0) {
+            setError("please set an api key name")
+            return
+        }
+
+        if (new Date(expiresAt) < new Date()) {
+            setError("please set a date that is later than the current date")
+            return
+        }
+        setError("")
         try {
-            const data = await api.createAPIKey(keyName, new Date(expiresAt).toISOString())
+            const data = await api.createAPIKey(keyName.trim(), new Date(expiresAt).toISOString())
             assert(data && data.key)
             setNewKeyValue(data.key);
             setCreateDialogOpen(false);
@@ -94,10 +101,19 @@ export function ApiKeysTab({ apiKeys, totalPages, refetchKeys, currentPage }: { 
     return (
         <div>
             <div className="flex justify-between items-center mb-4">
-                <h2 className="flex items-center gap-2 font-semibold text-lg">
-                    <Key className="w-5 h-5" />
-                    API Keys
-                </h2>
+                <div className='flex flex-col'>
+                    <h2 className="flex items-center gap-2 font-semibold text-lg">
+                        <Key className="w-5 h-5" />
+                        API Keys
+                    </h2>
+
+
+                    <Link className='my-4 hover:text-cyan-200 text-xs underline transition-all duration-300' to='/api-documentation'>
+                        API documentation
+                    </Link>
+
+                </div>
+
                 <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                     <DialogTrigger asChild>
                         <Button size="sm">
@@ -131,8 +147,13 @@ export function ApiKeysTab({ apiKeys, totalPages, refetchKeys, currentPage }: { 
                                     min={new Date().toISOString().split("T")[0]}
                                 />
                             </div>
-                        </div>
 
+                        </div>
+                        {error && (
+                            <div className="bg-destructive/10 px-4 py-3 border border-destructive/20 rounded-md text-destructive-foreground text-sm">
+                                {error}
+                            </div>
+                        )}
 
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
@@ -146,7 +167,7 @@ export function ApiKeysTab({ apiKeys, totalPages, refetchKeys, currentPage }: { 
                 </Dialog>
             </div>
 
-            {/* New Key Modal */}
+
             <Dialog open={newKeyModalOpen} onOpenChange={setNewKeyModalOpen}>
                 <DialogContent>
                     <DialogHeader>

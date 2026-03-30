@@ -150,7 +150,6 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       return { errors: ["Unauthorized"] };
     }
     assertUser(user)
-    // const partialUser: Partial<typeof user> = user
     const { passwordHash, ...safeUser } = user;
     return safeUser
   })

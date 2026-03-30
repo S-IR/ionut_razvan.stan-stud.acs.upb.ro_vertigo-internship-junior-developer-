@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServerErrorRouteImport } from './routes/server-error'
+import { Route as ApiDocumentationRouteImport } from './routes/api-documentation'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LeaderboardsIndexRouteImport } from './routes/leaderboards/index'
 import { Route as UsersNotFoundRouteImport } from './routes/users/not-found'
@@ -24,6 +25,11 @@ import { Route as AuthLoginRouteImport } from './routes/auth/login'
 const ServerErrorRoute = ServerErrorRouteImport.update({
   id: '/server-error',
   path: '/server-error',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDocumentationRoute = ApiDocumentationRouteImport.update({
+  id: '/api-documentation',
+  path: '/api-documentation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -79,6 +85,7 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api-documentation': typeof ApiDocumentationRoute
   '/server-error': typeof ServerErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api-documentation': typeof ApiDocumentationRoute
   '/server-error': typeof ServerErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -106,6 +114,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api-documentation': typeof ApiDocumentationRoute
   '/server-error': typeof ServerErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api-documentation'
     | '/server-error'
     | '/auth/login'
     | '/auth/logout'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api-documentation'
     | '/server-error'
     | '/auth/login'
     | '/auth/logout'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/api-documentation'
     | '/server-error'
     | '/auth/login'
     | '/auth/logout'
@@ -161,6 +173,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiDocumentationRoute: typeof ApiDocumentationRoute
   ServerErrorRoute: typeof ServerErrorRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
@@ -180,6 +193,13 @@ declare module '@tanstack/react-router' {
       path: '/server-error'
       fullPath: '/server-error'
       preLoaderRoute: typeof ServerErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api-documentation': {
+      id: '/api-documentation'
+      path: '/api-documentation'
+      fullPath: '/api-documentation'
+      preLoaderRoute: typeof ApiDocumentationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -257,6 +277,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiDocumentationRoute: ApiDocumentationRoute,
   ServerErrorRoute: ServerErrorRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,

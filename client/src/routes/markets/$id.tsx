@@ -10,7 +10,14 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Router } from "lucide-react";
 import { LabelList, Pie, PieChart } from "recharts";
 import { toast } from "sonner"
-
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ChartConfig,
   ChartContainer,
@@ -46,6 +53,8 @@ function MarketDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isBetting, setIsBetting] = useState(false);
   const [isSmall, setIsSmall] = useState(false);
+
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
 
@@ -135,13 +144,17 @@ function MarketDetailPage() {
 
   async function closeMarket() {
     if (selectedOutcomeId === null) {
-      setError("please select an outcome before proceeding to close the market")
-      return
+      setError("please select an outcome before proceeding to close the market");
+      setShowConfirm(false);
+      return;
     }
     try {
-      api.closeMarket(id, selectedOutcomeId).then(() => router.invalidate())
+      await api.closeMarket(id, selectedOutcomeId);
+      router.invalidate();
     } catch (error) {
-      toast("could not close the market. please try again later")
+      setError("could not close the market. please try again later");
+    } finally {
+      setShowConfirm(false);
     }
   }
   if (!isAuthenticated) {
@@ -190,15 +203,39 @@ function MarketDetailPage() {
                     Created by <span className="text -foreground">{market.creator}</span>
                   </p>
                 )}
+                <p className="text-muted-foreground text-xs">
+                  Market id: <span className="text -foreground">{id}</span>
+                </p>
               </div>
               <Badge className="top-2 left-2 absolute rounded-md! w-16! h-6!" variant={market.status === "active" ? "default" : "secondary"}>
                 {market.status === "active" ? "Active" : "Resolved"}
               </Badge>
               {user?.role === "admin" &&
-                <Button onClick={closeMarket} variant={"cyan"}>
+                <Button onClick={() => setShowConfirm(true)} variant="cyan">
                   Close Market
                 </Button>
               }
+
+
+              <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Close market?</DialogTitle>
+                    <DialogDescription>
+                      This will resolve the market with the selected outcome. This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowConfirm(false)}>
+                      Cancel
+                    </Button>
+                    <Button variant="cyan" onClick={closeMarket}>
+                      Yes, close market
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
             </div>
           </CardHeader>
         </Card>
@@ -296,7 +333,7 @@ function MarketDetailPage() {
                         style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                       />
                       <span className="font-medium text-sm">{outcome.title}</span>
-                      <span className="from-teal-200 font-medium text-xs">odds: {outcome.odds} </span>
+                      {/* <span className="from-teal-200 font-medium text-xs">odds: {outcome.odds} </span> */}
 
                     </div>
                     <span className="font-bold text-xl">{outcome.odds}</span>
