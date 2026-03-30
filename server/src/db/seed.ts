@@ -175,7 +175,7 @@ function createRandomMarket(): GeneratedMarket {
     title: createMarketTitle(category),
     description: createMarketDescription(category),
     status: faker.helpers.arrayElement(MARKET_STATUS_OPTIONS),
-    outcomes: createMarketOutcomes(category),
+    outcomes: createMarketOutcomes(category) as string[],
   };
 }
 
@@ -270,7 +270,7 @@ async function insertMarkets(users: SeededUser[]) {
       .insert(schema.marketOutcomesTable)
       .values(
         marketData.outcomes.map((title, position) => ({
-          marketId: createdMarket.id,
+          marketId: createdMarket!.id,
           title,
           position,
         })),
@@ -278,8 +278,8 @@ async function insertMarkets(users: SeededUser[]) {
       .returning();
 
     createdMarkets.push({
-      id: createdMarket.id,
-      title: createdMarket.title,
+      id: createdMarket!.id,
+      title: createdMarket!.title,
       status: marketData.status,
       outcomeIds: createdOutcomes.map((o) => o.id),
     });
