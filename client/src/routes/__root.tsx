@@ -3,7 +3,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { AuthProvider, getMeServerFn } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner"
-
+import { Navbar } from "@/components/navbar"
 import appCss from "../styles.css?url";
 import { api } from "@/lib/api";
 
@@ -40,7 +40,7 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "TanStack Start Starter",
+        title: "Folley",
       },
     ],
     links: [
@@ -83,6 +83,7 @@ function RootComponent() {
           </div>
         </div>
       )}
+      <Navbar />
       <Outlet />
       <Toaster />
       <TanStackDevtools

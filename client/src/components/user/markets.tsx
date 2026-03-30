@@ -1,5 +1,5 @@
 
-import { MarketWithoutOutcomes } from '@/lib/api'
+import { Market, MarketWithoutOutcomes } from '@/lib/api'
 import {
     Card,
     CardAction,
@@ -12,15 +12,23 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Route } from '@/routes/users/$userID'
 import { PaginationControl } from './pagination'
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
+    DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from '@/components/ui/button'
+
 
 export function MarketsList({
     markets,
     currentPage,
     totalPages,
+    marketStatus
 }: {
-    markets: MarketWithoutOutcomes[];   // Use your interface
+    markets: MarketWithoutOutcomes[];
     currentPage: number
     totalPages: number
+    marketStatus: Market["status"] | undefined
 }) {
     const navigate = Route.useNavigate();
 
@@ -40,6 +48,65 @@ export function MarketsList({
 
     return (
         <div>
+
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="mt-4 mb-4">
+                        Filter by Market Status: {marketStatus ?? "All"}
+                    </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent>
+                    <DropdownMenuGroup>
+                        <DropdownMenuLabel>Market Status</DropdownMenuLabel>
+
+                        <DropdownMenuItem
+                            onClick={() =>
+                                navigate({
+                                    search: (prev) => {
+                                        delete prev.marketStatus;
+                                        return { ...prev, marketsPage: 0 };
+                                    },
+                                })
+                            }
+                        >
+                            All
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                            onClick={() =>
+                                navigate({
+                                    search: (prev) => ({
+                                        ...prev,
+                                        marketStatus: "active",
+                                        marketsPage: 0,
+                                    }),
+                                })
+                            }
+
+                            className={marketStatus === "active" ? "bg-accent" : ""}
+                        >
+                            Active
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                            onClick={() =>
+                                navigate({
+                                    search: (prev) => ({
+                                        ...prev,
+                                        marketStatus: "resolved",
+                                        marketsPage: 0,
+                                    }),
+                                })
+                            }
+                            className={marketStatus === "resolved" ? "bg-accent" : ""}
+                        >
+                            Resolved
+                        </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
             <div className="gap-4 grid">
                 {markets.map((market) => (
                     <MarketRow key={market.id} market={market} />
@@ -57,8 +124,11 @@ export function MarketsList({
 
 function MarketRow({ market }: { market: MarketWithoutOutcomes }) {
     return (
+
+
+
         <Card className="bg-card">
-            <CardContent className="pt-5 pb-5">
+            <CardContent className="relative pt-5 pb-5">
                 <div className="flex sm:flex-row flex-col sm:items-start gap-4">
                     <div className="flex-1 min-w-0">
                         <h3 className="mb-2 font-medium text-base leading-tight">
@@ -90,16 +160,16 @@ function MarketRow({ market }: { market: MarketWithoutOutcomes }) {
                         </div>
                     </div>
 
-                    <div className="flex-shrink-0 mt-1 sm:mt-0">
-                        <Badge
-                            variant={market.status === "active" ? "default" : "secondary"}
-                            className={market.status === "resolved" ? "bg-emerald-600" : ""}
-                        >
-                            {market.status === "active" ? "Active" : "Resolved"}
-                        </Badge>
-                    </div>
+                    <Badge
+                        variant={market.status === "active" ? "default" : "secondary"}
+                        className={`${market.status === "resolved" ? "bg-emerald-600" : ""} rounded-md! w-16! h-6! absolute -bottom-6 right-0 md:relative!`}
+                    >
+                        {market.status === "active" ? "Active" : "Resolved"}
+                    </Badge>
                 </div>
             </CardContent>
         </Card>
+
+
     );
 }

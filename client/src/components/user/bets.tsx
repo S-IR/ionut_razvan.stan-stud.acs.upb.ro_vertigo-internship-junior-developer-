@@ -44,11 +44,11 @@ export function BetsList({
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                        Filter by Status: {betStatus ?? "All"}
+                    <Button variant="outline" className='mt-4 mb-4'>
+                        Filter by Bet Status: {betStatus ?? "All"}
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent >
                     <DropdownMenuGroup>
                         <DropdownMenuLabel>Bet Status</DropdownMenuLabel>
                         <DropdownMenuItem
@@ -125,17 +125,17 @@ export function BetCard({ bet }: { bet: BetWithDetails }) {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                         {bet.status === "ongoing" &&
-                            <Badge variant="default">Active</Badge>
+                            <Badge className='bg-transparent border rounded-md! w-16! h-6! text-cyan-200!' variant="default">Ongoing</Badge>
                         }
                         {bet.status === "lost" &&
-                            <Badge variant={"destructive"}>
+                            <Badge className='rounded-md! w-16! h-6!' variant={"destructive"}>
                                 Lost
                             </Badge>
 
                         }
 
                         {bet.status === "won" &&
-                            <Badge variant={"default"} className={"bg-emerald-600"}>
+                            <Badge variant={"default"} className={"bg-emerald-600 w-16! h-6! rounded-md!"}>
                                 Won
                             </Badge>
                         }

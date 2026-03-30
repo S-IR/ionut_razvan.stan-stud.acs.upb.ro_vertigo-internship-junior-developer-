@@ -244,7 +244,7 @@ function RouteComponent() {
         setDeveloperMode(newMode)
     }
     return (
-        <div className="bg-background min-h-screen">
+        <div className="bg-background pb-12 min-h-screen">
             <div className="mx-auto px-4 py-8 max-w-4xl">
                 <Card className="mb-6">
                     <CardHeader>
@@ -277,7 +277,7 @@ function RouteComponent() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex gap-6 text-sm">
+                        <div className="flex gap-6 rounded-sm">
                             <div>
                                 <span className="text-muted-foreground">Active Bets:</span>{" "}
                                 <span className="font-medium">{activeBets.length}</span>
@@ -307,8 +307,8 @@ function RouteComponent() {
 
 
 
-                <Tabs defaultValue='bets'>
-                    <TabsList className="mb-4">
+                <Tabs defaultValue='bets' >
+                    <TabsList className="bg-transparent! mb-4 border rounded-md!">
                         <TabsTrigger value="bets">Bets</TabsTrigger>
                         <TabsTrigger value="markets">Created Markets</TabsTrigger>
                         {sameUser && developerMode && <TabsTrigger value="api-keys">API Keys</TabsTrigger>}
@@ -324,31 +324,13 @@ function RouteComponent() {
                     </TabsContent>
 
                     <TabsContent value="markets">
-                        <div className="flex gap-4 mb-6">
-                            <Button
-                                variant={!marketStatus ? "default" : "outline"}
-                                onClick={() => navigate({ search: (prev) => { delete prev.marketStatus; return { ...prev, marketsPage: 0 } } })}
-                            >
-                                All Markets
-                            </Button>
-                            <Button
-                                variant={marketStatus === "active" ? "default" : "outline"}
-                                onClick={() => navigate({ search: (prev) => ({ ...prev, marketStatus: "active", marketsPage: 0 }) })}
-                            >
-                                Active Markets
-                            </Button>
-                            <Button
-                                variant={marketStatus === "resolved" ? "default" : "outline"}
-                                onClick={() => navigate({ search: (prev) => ({ ...prev, marketStatus: "resolved", marketsPage: 0 }) })}
-                            >
-                                Resolved Markets
-                            </Button>
-                        </div>
+
 
                         <MarketsList
                             markets={markets}
                             currentPage={marketsPage}
                             totalPages={marketsTotalPages}
+                            marketStatus={marketStatus}
                         />
                     </TabsContent>
 

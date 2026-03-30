@@ -39,7 +39,6 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       where: (users, { or, eq }) => or(eq(users.email, email), eq(users.username, username)),
     });
 
-    console.log("existingUser", existingUser)
 
     if (existingUser) {
       set.status = 409;

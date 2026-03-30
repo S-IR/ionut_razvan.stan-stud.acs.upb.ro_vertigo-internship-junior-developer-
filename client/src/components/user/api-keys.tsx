@@ -185,6 +185,8 @@ export function ApiKeysTab({ apiKeys, totalPages, refetchKeys, currentPage }: { 
                                         </div>
                                         <div className="flex items-center gap-4 mt-2 text-muted-foreground text-xs">
                                             <span>Created: {new Date(key.createdAt).toLocaleDateString()}</span>
+                                            <span>Expires at:  {key.expiresAt === null ? "Never" : new Date(key.expiresAt).toLocaleDateString()}</span>
+
                                             <span>Last used: {timeAgo(key.lastUsedAt)}</span>
                                         </div>
                                     </div>

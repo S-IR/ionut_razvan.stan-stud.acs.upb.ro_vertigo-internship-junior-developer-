@@ -297,17 +297,6 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       assert(user)
       return { errors: ["internal server error"] }
     }
-    if (process.env.ENV === "DEV") {
-      assert(typeof title === "string");
-      assert(title !== "");
-      assert(description === undefined || typeof description === "string");
-      assert(Array.isArray(outcomes));
-      assert(outcomes.length >= 2);
-      for (const o of outcomes) {
-        assert(typeof o === "string");
-        assert(o !== "");
-      }
-    }
 
     assertUser(user);
 
@@ -320,6 +309,17 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
     if (errors.length > 0) {
       set.status = 400;
       return { errors };
+    }
+    if (process.env.ENV === "DEV") {
+      assert(typeof title === "string");
+      assert(title !== "");
+      assert(description === undefined || typeof description === "string");
+      assert(Array.isArray(outcomes));
+      assert(outcomes.length >= 2);
+      for (const o of outcomes) {
+        assert(typeof o === "string");
+        assert(o !== "");
+      }
     }
 
     const market = await db
@@ -382,14 +382,7 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       assert(user)
       return { errors: ["internal server error"] }
     }
-    if (process.env.ENV === "DEV") {
-      assert(typeof marketId === "number");
-      assert(marketId >= 0);
-      assert(typeof outcomeId === "number");
-      assert(outcomeId >= 0);
-      assert(typeof amount === "number");
-      assert(amount > 0);
-    }
+
 
     assertUser(user!);
 
@@ -399,6 +392,16 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       set.status = 400;
       return { errors };
     }
+
+    if (process.env.ENV === "DEV") {
+      assert(typeof marketId === "number");
+      assert(marketId >= 0);
+      assert(typeof outcomeId === "number");
+      assert(outcomeId >= 0);
+      assert(typeof amount === "number");
+      assert(amount > 0);
+    }
+
 
     if (user.balance < body.amount) {
       set.status = 400;

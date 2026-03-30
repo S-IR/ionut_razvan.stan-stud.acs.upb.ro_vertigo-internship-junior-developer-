@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { useParams, useNavigate, createFileRoute, redirect, useRouter, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { api, Market, ESMarketEvent } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,14 @@ function MarketDetailPage() {
   // const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBetting, setIsBetting] = useState(false);
+  const [isSmall, setIsSmall] = useState(false);
 
+  useEffect(() => {
+    const check = () => setIsSmall(window.innerWidth <= 650);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // console.log("market", market)
 
@@ -132,7 +139,7 @@ function MarketDetailPage() {
       return
     }
     try {
-      api.closeMarket(id, selectedOutcomeId)
+      await api.closeMarket(id, selectedOutcomeId)
     } catch (error) {
       toast("could not close the market. please try again later")
     }
@@ -158,16 +165,19 @@ function MarketDetailPage() {
   //   );
   // }
   return (
-    <div className="bg-background min-h-screen dark">
+    <div className="min-h-screen dark">
       <div className="mx-auto px-4 py-8 max-w-3xl">
         {/* Back Button */}
-        <Button variant="ghost" size="sm" className="gap-2 mb-6">
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
+        <Link to="/">
+          <Button variant="ghost" size="sm" className="gap-2 mb-6">
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+
+        </Link>
 
         {/* Market Header */}
-        <Card className="mb-6">
+        <Card className="relative mb-6">
           <CardHeader>
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1">
@@ -181,7 +191,7 @@ function MarketDetailPage() {
                   </p>
                 )}
               </div>
-              <Badge variant={market.status === "active" ? "default" : "secondary"}>
+              <Badge className="top-2 left-2 absolute rounded-md! w-16! h-6!" variant={market.status === "active" ? "default" : "secondary"}>
                 {market.status === "active" ? "Active" : "Resolved"}
               </Badge>
               {user?.role === "admin" &&
@@ -223,11 +233,12 @@ function MarketDetailPage() {
                     />
                     <Pie
                       data={chartData}
-                      innerRadius={30}
                       dataKey="percentage"
                       nameKey="outcome"
                       cornerRadius={8}
                       paddingAngle={4}
+                      innerRadius={isSmall ? 10 : 30}
+                    // outerRadius={isSmall ? 100 : 80}
                     >
                       <LabelList
                         dataKey="percentage"

@@ -61,11 +61,13 @@ function DashboardPage() {
       <div className="flex justify-center items-center min-h-screen align-middle">
         <div className="text-center">
           <h1 className="mb-4 font-mali font-bold text-cyan-200 text-8xl">Folley</h1>
+
           <p className="mb-8 text-gray-200 text-lg">Create and participate in prediction markets</p>
           <div className="space-x-4">
             <Button onClick={() => navigate({ to: "/auth/login" })} variant="cyan" size="xs">Login</Button>
             <Button onClick={() => navigate({ to: "/auth/register" })} variant="cyan" size="xs" className="bg-transparent text-emerald-200 hover:text-white">Sign Up</Button>
           </div>
+          <img className="mx-auto" width={128} height={128} src="/logo.png" />
         </div>
       </div>
     );
@@ -81,45 +83,102 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto px-4 py-8 max-w-7xl">
+      <div className="mx-auto px-4 py-8 md:max-w-7xl!">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="font-bold text-gray-900 text-4xl">Markets</h1>
-            <p className="mt-2 text-gray-600">Welcome back, {user?.username}!</p>
+            <h1 className="font-mali font-bold text-cyan-200 text-xl md:text-4xl">Markets</h1>
+            {/* <p className="mt-2 text-gray-600">Welcome back, {user?.username}!</p> */}
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate({ to: "/auth/logout" })}>Logout</Button>
-            <Button onClick={() => navigate({ to: "/markets/new" })}>Create Market</Button>
+            <Button variant={"secondary"} onClick={() => navigate({ to: "/markets/new" })}>Create Market</Button>
           </div>
         </div>
 
         <div className="flex gap-4 mb-6">
-          <Button variant={status === "active" ? "default" : "outline"} onClick={() => navigate({ search: (prev) => ({ ...prev, status: "active", page: 0 }) })}>Active Markets</Button>
-          <Button variant={status === "resolved" ? "default" : "outline"} onClick={() => navigate({ search: (prev) => ({ ...prev, status: "resolved", page: 0 }) })}>Resolved Markets</Button>
-          <Button variant="outline" onClick={() => router.invalidate()}>Refresh</Button>
+          <div className="flex flex-col md:flex-row! items-center space-x-0 md:space-x-4! space-y-4 md:space-y-0!">
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">Sort By</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="flex w-auto! max-w-none!">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Created At Date</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.DateAsc, MARKETS_SORT_BY_OPTION.DateDesc)} className={sort.includes(MARKETS_SORT_BY_OPTION.DateAsc) ? "bg-accent" : ""}>Ascending</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.DateDesc, MARKETS_SORT_BY_OPTION.DateAsc)} className={sort.includes(MARKETS_SORT_BY_OPTION.DateDesc) ? "bg-accent" : ""}>Descending</DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Total Bet Size</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.TotalBetSizeAsc, MARKETS_SORT_BY_OPTION.TotalBetSizeDesc)} className={sort.includes(MARKETS_SORT_BY_OPTION.TotalBetSizeAsc) ? "bg-accent" : ""}>Ascending</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.TotalBetSizeDesc, MARKETS_SORT_BY_OPTION.TotalBetSizeAsc)} className={sort.includes(MARKETS_SORT_BY_OPTION.TotalBetSizeDesc) ? "bg-accent" : ""}>Descending</DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Number of Participants</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc, MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc)} className={sort.includes(MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc) ? "bg-accent" : ""}>Ascending</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc, MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc)} className={sort.includes(MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc) ? "bg-accent" : ""}>Descending</DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="mt-4 mb-4">
+                  Market status: {status ?? "All"}
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Market Status</DropdownMenuLabel>
+
+                  <DropdownMenuItem
+                    onClick={() =>
+                      navigate({
+                        search: (prev) => {
+                          delete prev.status;
+                          return { ...prev, page: 0 };
+                        },
+                      })
+                    }
+                  >
+                    All
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() =>
+                      navigate({
+                        search: (prev) => ({
+                          ...prev,
+                          status: "active",
+                          page: 0,
+                        }),
+                      })
+                    }
+
+                    className={status === "active" ? "bg-accent" : ""}
+                  >
+                    Active
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() =>
+                      navigate({
+                        search: (prev) => ({
+                          ...prev,
+                          status: "resolved",
+                          page: 0,
+                        }),
+                      })
+                    }
+                    className={status === "resolved" ? "bg-accent" : ""}
+                  >
+                    Resolved
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">Sort By</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="flex w-auto! max-w-none!">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Created At Date</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.DateAsc, MARKETS_SORT_BY_OPTION.DateDesc)} className={sort.includes(MARKETS_SORT_BY_OPTION.DateAsc) ? "bg-accent" : ""}>Ascending</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.DateDesc, MARKETS_SORT_BY_OPTION.DateAsc)} className={sort.includes(MARKETS_SORT_BY_OPTION.DateDesc) ? "bg-accent" : ""}>Descending</DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Total Bet Size</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.TotalBetSizeAsc, MARKETS_SORT_BY_OPTION.TotalBetSizeDesc)} className={sort.includes(MARKETS_SORT_BY_OPTION.TotalBetSizeAsc) ? "bg-accent" : ""}>Ascending</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.TotalBetSizeDesc, MARKETS_SORT_BY_OPTION.TotalBetSizeAsc)} className={sort.includes(MARKETS_SORT_BY_OPTION.TotalBetSizeDesc) ? "bg-accent" : ""}>Descending</DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Number of Participants</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc, MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc)} className={sort.includes(MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc) ? "bg-accent" : ""}>Ascending</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => changeSortOptions(MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc, MARKETS_SORT_BY_OPTION.NumOfParticipantsAsc)} className={sort.includes(MARKETS_SORT_BY_OPTION.NumOfParticipantsDesc) ? "bg-accent" : ""}>Descending</DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
         </div>
 
         {markets.length === 0 ? (
@@ -174,7 +233,7 @@ export const Route = createFileRoute("/")({
   validateSearch: z.object({
     page: z.number().default(0),
     sort: z.array(z.nativeEnum(MARKETS_SORT_BY_OPTION)).default([]),
-    status: z.enum(["active", "resolved"]).default("active"),
+    status: z.optional(z.enum(["active", "resolved"])),
   }),
   loaderDeps: ({ search: { page, sort, status } }) => ({ page, sort, status }),
   loader: async ({ deps: { page, sort, status } }) => {

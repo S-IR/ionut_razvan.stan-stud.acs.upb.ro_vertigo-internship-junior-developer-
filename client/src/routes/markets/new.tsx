@@ -54,9 +54,9 @@ function CreateMarketPage() {
   });
   if (authIsLoading) return <></>
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-4 min-h-screen">
+    <div className="p-4 min-h-screen">
       <div className="mx-auto max-w-2xl">
-        <Card>
+        <Card className="mt-4">
           <CardHeader className="space-y-2">
             <CardTitle className="text-3xl">Create a Market</CardTitle>
             <CardDescription>
