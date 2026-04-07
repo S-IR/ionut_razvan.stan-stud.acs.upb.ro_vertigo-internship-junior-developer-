@@ -1,5 +1,6 @@
 import { sqliteTable, text, real, integer, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
+export const USER_STARTING_BALANCE = 1000
 
 // Users table
 export const usersTable = sqliteTable(
@@ -19,7 +20,7 @@ export const usersTable = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),
-    balance: real("balance").notNull().default(1000.0),
+    balance: real("balance").notNull().default(USER_STARTING_BALANCE),
   },
   (table) => ({
     usernameIdx: uniqueIndex("users_username_idx").on(table.username),

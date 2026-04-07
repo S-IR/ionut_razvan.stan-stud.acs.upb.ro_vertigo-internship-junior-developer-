@@ -6,7 +6,7 @@ import { validateLogin, validateRegistration } from "../lib/validation";
 import db from "../db";
 import { hashPassword, verifyPassword } from "../lib/auth";
 import { eq } from "drizzle-orm";
-import { usersTable } from "../db/schema";
+import { USER_STARTING_BALANCE, usersTable } from "../db/schema";
 
 const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -49,14 +49,14 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       }
 
       const passwordHash = await hashPassword(password);
-
       const newUser = await db
         .insert(usersTable)
         .values({
           username,
           email,
           passwordHash,
-          role: process.env.ENV === "DEV" ? "admin" : undefined,
+          balance: USER_STARTING_BALANCE,
+          // role: process.env.ENV === "DEV" ? "admin" : undefined,
         })
         .returning()!;
       assert(newUser.length > 0);
