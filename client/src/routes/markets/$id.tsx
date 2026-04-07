@@ -214,7 +214,13 @@ function MarketDetailPage() {
                 {market.status === "active" ? "Active" : "Resolved"}
               </Badge>
               {user?.role === "admin" && (
-                <Button onClick={() => setShowConfirm(true)} variant="cyan">
+                <Button onClick={() => {
+                  if (!!selectedOutcome) {
+                    setShowConfirm(true)
+                  } else {
+                    toast.error("please select an outcome before trying to close the market")
+                  }
+                }} variant="cyan">
                   Close Market
                 </Button>
               )}
@@ -224,8 +230,11 @@ function MarketDetailPage() {
                   <DialogHeader>
                     <DialogTitle>Close market?</DialogTitle>
                     <DialogDescription>
-                      This will resolve the market with the selected outcome. This action cannot be
+                      {`
+                      This will resolve the market with the selected outcome "${selectedOutcome?.title}" . This action cannot be
                       undone.
+
+                      `}
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
@@ -277,7 +286,7 @@ function MarketDetailPage() {
                       cornerRadius={8}
                       paddingAngle={4}
                       innerRadius={isSmall ? 10 : 30}
-                      // outerRadius={isSmall ? 100 : 80}
+                    // outerRadius={isSmall ? 100 : 80}
                     >
                       <LabelList
                         dataKey="percentage"
@@ -323,11 +332,10 @@ function MarketDetailPage() {
               {market.outcomes.map((outcome, index) => (
                 <button
                   key={outcome.id}
-                  className={`p-3 w-full rounded-lg border transition-colors cursor-pointer ${
-                    selectedOutcomeId === outcome.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-muted-foreground/50"
-                  }`}
+                  className={`p-3 w-full rounded-lg border transition-colors cursor-pointer ${selectedOutcomeId === outcome.id
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-muted-foreground/50"
+                    }`}
                   onClick={() => market.status === "active" && setSelectedOutcomeId(outcome.id)}
                 >
                   <div className="flex justify-between items-center">
@@ -363,7 +371,7 @@ function MarketDetailPage() {
         </div>
 
         {/* Betting Section */}
-        {market.status === "active" && (
+        {market.status === "active" && user && user.role !== "admin" && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle className="text-base">Place a Bet</CardTitle>

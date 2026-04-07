@@ -8,270 +8,270 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as ServerErrorRouteImport } from "./routes/server-error";
-import { Route as ApiDocumentationRouteImport } from "./routes/api-documentation";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as LeaderboardsIndexRouteImport } from "./routes/leaderboards/index";
-import { Route as UsersNotFoundRouteImport } from "./routes/users/not-found";
-import { Route as UsersUserIDRouteImport } from "./routes/users/$userID";
-import { Route as MarketsNotFoundRouteImport } from "./routes/markets/not-found";
-import { Route as MarketsNewRouteImport } from "./routes/markets/new";
-import { Route as MarketsIdRouteImport } from "./routes/markets/$id";
-import { Route as AuthRegisterRouteImport } from "./routes/auth/register";
-import { Route as AuthLogoutRouteImport } from "./routes/auth/logout";
-import { Route as AuthLoginRouteImport } from "./routes/auth/login";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as ServerErrorRouteImport } from './routes/server-error'
+import { Route as ApiDocumentationRouteImport } from './routes/api-documentation'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as LeaderboardsIndexRouteImport } from './routes/leaderboards/index'
+import { Route as UsersNotFoundRouteImport } from './routes/users/not-found'
+import { Route as UsersUserIDRouteImport } from './routes/users/$userID'
+import { Route as MarketsNotFoundRouteImport } from './routes/markets/not-found'
+import { Route as MarketsNewRouteImport } from './routes/markets/new'
+import { Route as MarketsIdRouteImport } from './routes/markets/$id'
+import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
 
 const ServerErrorRoute = ServerErrorRouteImport.update({
-  id: "/server-error",
-  path: "/server-error",
+  id: '/server-error',
+  path: '/server-error',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ApiDocumentationRoute = ApiDocumentationRouteImport.update({
-  id: "/api-documentation",
-  path: "/api-documentation",
+  id: '/api-documentation',
+  path: '/api-documentation',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LeaderboardsIndexRoute = LeaderboardsIndexRouteImport.update({
-  id: "/leaderboards/",
-  path: "/leaderboards/",
+  id: '/leaderboards/',
+  path: '/leaderboards/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const UsersNotFoundRoute = UsersNotFoundRouteImport.update({
-  id: "/users/not-found",
-  path: "/users/not-found",
+  id: '/users/not-found',
+  path: '/users/not-found',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const UsersUserIDRoute = UsersUserIDRouteImport.update({
-  id: "/users/$userID",
-  path: "/users/$userID",
+  id: '/users/$userID',
+  path: '/users/$userID',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const MarketsNotFoundRoute = MarketsNotFoundRouteImport.update({
-  id: "/markets/not-found",
-  path: "/markets/not-found",
+  id: '/markets/not-found',
+  path: '/markets/not-found',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const MarketsNewRoute = MarketsNewRouteImport.update({
-  id: "/markets/new",
-  path: "/markets/new",
+  id: '/markets/new',
+  path: '/markets/new',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const MarketsIdRoute = MarketsIdRouteImport.update({
-  id: "/markets/$id",
-  path: "/markets/$id",
+  id: '/markets/$id',
+  path: '/markets/$id',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
-  id: "/auth/register",
-  path: "/auth/register",
+  id: '/auth/register',
+  path: '/auth/register',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthLogoutRoute = AuthLogoutRouteImport.update({
-  id: "/auth/logout",
-  path: "/auth/logout",
+  id: '/auth/logout',
+  path: '/auth/logout',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: "/auth/login",
-  path: "/auth/login",
+  id: '/auth/login',
+  path: '/auth/login',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/api-documentation": typeof ApiDocumentationRoute;
-  "/server-error": typeof ServerErrorRoute;
-  "/auth/login": typeof AuthLoginRoute;
-  "/auth/logout": typeof AuthLogoutRoute;
-  "/auth/register": typeof AuthRegisterRoute;
-  "/markets/$id": typeof MarketsIdRoute;
-  "/markets/new": typeof MarketsNewRoute;
-  "/markets/not-found": typeof MarketsNotFoundRoute;
-  "/users/$userID": typeof UsersUserIDRoute;
-  "/users/not-found": typeof UsersNotFoundRoute;
-  "/leaderboards/": typeof LeaderboardsIndexRoute;
+  '/': typeof IndexRoute
+  '/api-documentation': typeof ApiDocumentationRoute
+  '/server-error': typeof ServerErrorRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/markets/$id': typeof MarketsIdRoute
+  '/markets/new': typeof MarketsNewRoute
+  '/markets/not-found': typeof MarketsNotFoundRoute
+  '/users/$userID': typeof UsersUserIDRoute
+  '/users/not-found': typeof UsersNotFoundRoute
+  '/leaderboards/': typeof LeaderboardsIndexRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/api-documentation": typeof ApiDocumentationRoute;
-  "/server-error": typeof ServerErrorRoute;
-  "/auth/login": typeof AuthLoginRoute;
-  "/auth/logout": typeof AuthLogoutRoute;
-  "/auth/register": typeof AuthRegisterRoute;
-  "/markets/$id": typeof MarketsIdRoute;
-  "/markets/new": typeof MarketsNewRoute;
-  "/markets/not-found": typeof MarketsNotFoundRoute;
-  "/users/$userID": typeof UsersUserIDRoute;
-  "/users/not-found": typeof UsersNotFoundRoute;
-  "/leaderboards": typeof LeaderboardsIndexRoute;
+  '/': typeof IndexRoute
+  '/api-documentation': typeof ApiDocumentationRoute
+  '/server-error': typeof ServerErrorRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/markets/$id': typeof MarketsIdRoute
+  '/markets/new': typeof MarketsNewRoute
+  '/markets/not-found': typeof MarketsNotFoundRoute
+  '/users/$userID': typeof UsersUserIDRoute
+  '/users/not-found': typeof UsersNotFoundRoute
+  '/leaderboards': typeof LeaderboardsIndexRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/api-documentation": typeof ApiDocumentationRoute;
-  "/server-error": typeof ServerErrorRoute;
-  "/auth/login": typeof AuthLoginRoute;
-  "/auth/logout": typeof AuthLogoutRoute;
-  "/auth/register": typeof AuthRegisterRoute;
-  "/markets/$id": typeof MarketsIdRoute;
-  "/markets/new": typeof MarketsNewRoute;
-  "/markets/not-found": typeof MarketsNotFoundRoute;
-  "/users/$userID": typeof UsersUserIDRoute;
-  "/users/not-found": typeof UsersNotFoundRoute;
-  "/leaderboards/": typeof LeaderboardsIndexRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/api-documentation': typeof ApiDocumentationRoute
+  '/server-error': typeof ServerErrorRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/markets/$id': typeof MarketsIdRoute
+  '/markets/new': typeof MarketsNewRoute
+  '/markets/not-found': typeof MarketsNotFoundRoute
+  '/users/$userID': typeof UsersUserIDRoute
+  '/users/not-found': typeof UsersNotFoundRoute
+  '/leaderboards/': typeof LeaderboardsIndexRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/api-documentation"
-    | "/server-error"
-    | "/auth/login"
-    | "/auth/logout"
-    | "/auth/register"
-    | "/markets/$id"
-    | "/markets/new"
-    | "/markets/not-found"
-    | "/users/$userID"
-    | "/users/not-found"
-    | "/leaderboards/";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | '/api-documentation'
+    | '/server-error'
+    | '/auth/login'
+    | '/auth/logout'
+    | '/auth/register'
+    | '/markets/$id'
+    | '/markets/new'
+    | '/markets/not-found'
+    | '/users/$userID'
+    | '/users/not-found'
+    | '/leaderboards/'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | "/api-documentation"
-    | "/server-error"
-    | "/auth/login"
-    | "/auth/logout"
-    | "/auth/register"
-    | "/markets/$id"
-    | "/markets/new"
-    | "/markets/not-found"
-    | "/users/$userID"
-    | "/users/not-found"
-    | "/leaderboards";
+    | '/'
+    | '/api-documentation'
+    | '/server-error'
+    | '/auth/login'
+    | '/auth/logout'
+    | '/auth/register'
+    | '/markets/$id'
+    | '/markets/new'
+    | '/markets/not-found'
+    | '/users/$userID'
+    | '/users/not-found'
+    | '/leaderboards'
   id:
-    | "__root__"
-    | "/"
-    | "/api-documentation"
-    | "/server-error"
-    | "/auth/login"
-    | "/auth/logout"
-    | "/auth/register"
-    | "/markets/$id"
-    | "/markets/new"
-    | "/markets/not-found"
-    | "/users/$userID"
-    | "/users/not-found"
-    | "/leaderboards/";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/api-documentation'
+    | '/server-error'
+    | '/auth/login'
+    | '/auth/logout'
+    | '/auth/register'
+    | '/markets/$id'
+    | '/markets/new'
+    | '/markets/not-found'
+    | '/users/$userID'
+    | '/users/not-found'
+    | '/leaderboards/'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  ApiDocumentationRoute: typeof ApiDocumentationRoute;
-  ServerErrorRoute: typeof ServerErrorRoute;
-  AuthLoginRoute: typeof AuthLoginRoute;
-  AuthLogoutRoute: typeof AuthLogoutRoute;
-  AuthRegisterRoute: typeof AuthRegisterRoute;
-  MarketsIdRoute: typeof MarketsIdRoute;
-  MarketsNewRoute: typeof MarketsNewRoute;
-  MarketsNotFoundRoute: typeof MarketsNotFoundRoute;
-  UsersUserIDRoute: typeof UsersUserIDRoute;
-  UsersNotFoundRoute: typeof UsersNotFoundRoute;
-  LeaderboardsIndexRoute: typeof LeaderboardsIndexRoute;
+  IndexRoute: typeof IndexRoute
+  ApiDocumentationRoute: typeof ApiDocumentationRoute
+  ServerErrorRoute: typeof ServerErrorRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthLogoutRoute: typeof AuthLogoutRoute
+  AuthRegisterRoute: typeof AuthRegisterRoute
+  MarketsIdRoute: typeof MarketsIdRoute
+  MarketsNewRoute: typeof MarketsNewRoute
+  MarketsNotFoundRoute: typeof MarketsNotFoundRoute
+  UsersUserIDRoute: typeof UsersUserIDRoute
+  UsersNotFoundRoute: typeof UsersNotFoundRoute
+  LeaderboardsIndexRoute: typeof LeaderboardsIndexRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/server-error": {
-      id: "/server-error";
-      path: "/server-error";
-      fullPath: "/server-error";
-      preLoaderRoute: typeof ServerErrorRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api-documentation": {
-      id: "/api-documentation";
-      path: "/api-documentation";
-      fullPath: "/api-documentation";
-      preLoaderRoute: typeof ApiDocumentationRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/leaderboards/": {
-      id: "/leaderboards/";
-      path: "/leaderboards";
-      fullPath: "/leaderboards/";
-      preLoaderRoute: typeof LeaderboardsIndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/users/not-found": {
-      id: "/users/not-found";
-      path: "/users/not-found";
-      fullPath: "/users/not-found";
-      preLoaderRoute: typeof UsersNotFoundRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/users/$userID": {
-      id: "/users/$userID";
-      path: "/users/$userID";
-      fullPath: "/users/$userID";
-      preLoaderRoute: typeof UsersUserIDRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/markets/not-found": {
-      id: "/markets/not-found";
-      path: "/markets/not-found";
-      fullPath: "/markets/not-found";
-      preLoaderRoute: typeof MarketsNotFoundRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/markets/new": {
-      id: "/markets/new";
-      path: "/markets/new";
-      fullPath: "/markets/new";
-      preLoaderRoute: typeof MarketsNewRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/markets/$id": {
-      id: "/markets/$id";
-      path: "/markets/$id";
-      fullPath: "/markets/$id";
-      preLoaderRoute: typeof MarketsIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/auth/register": {
-      id: "/auth/register";
-      path: "/auth/register";
-      fullPath: "/auth/register";
-      preLoaderRoute: typeof AuthRegisterRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/auth/logout": {
-      id: "/auth/logout";
-      path: "/auth/logout";
-      fullPath: "/auth/logout";
-      preLoaderRoute: typeof AuthLogoutRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/auth/login": {
-      id: "/auth/login";
-      path: "/auth/login";
-      fullPath: "/auth/login";
-      preLoaderRoute: typeof AuthLoginRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+    '/server-error': {
+      id: '/server-error'
+      path: '/server-error'
+      fullPath: '/server-error'
+      preLoaderRoute: typeof ServerErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api-documentation': {
+      id: '/api-documentation'
+      path: '/api-documentation'
+      fullPath: '/api-documentation'
+      preLoaderRoute: typeof ApiDocumentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboards/': {
+      id: '/leaderboards/'
+      path: '/leaderboards'
+      fullPath: '/leaderboards/'
+      preLoaderRoute: typeof LeaderboardsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/not-found': {
+      id: '/users/not-found'
+      path: '/users/not-found'
+      fullPath: '/users/not-found'
+      preLoaderRoute: typeof UsersNotFoundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/$userID': {
+      id: '/users/$userID'
+      path: '/users/$userID'
+      fullPath: '/users/$userID'
+      preLoaderRoute: typeof UsersUserIDRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/markets/not-found': {
+      id: '/markets/not-found'
+      path: '/markets/not-found'
+      fullPath: '/markets/not-found'
+      preLoaderRoute: typeof MarketsNotFoundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/markets/new': {
+      id: '/markets/new'
+      path: '/markets/new'
+      fullPath: '/markets/new'
+      preLoaderRoute: typeof MarketsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/markets/$id': {
+      id: '/markets/$id'
+      path: '/markets/$id'
+      fullPath: '/markets/$id'
+      preLoaderRoute: typeof MarketsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/register': {
+      id: '/auth/register'
+      path: '/auth/register'
+      fullPath: '/auth/register'
+      preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/logout': {
+      id: '/auth/logout'
+      path: '/auth/logout'
+      fullPath: '/auth/logout'
+      preLoaderRoute: typeof AuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -288,16 +288,16 @@ const rootRouteChildren: RootRouteChildren = {
   UsersUserIDRoute: UsersUserIDRoute,
   UsersNotFoundRoute: UsersNotFoundRoute,
   LeaderboardsIndexRoute: LeaderboardsIndexRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx";
-import type { createStart } from "@tanstack/react-start";
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
   }
 }

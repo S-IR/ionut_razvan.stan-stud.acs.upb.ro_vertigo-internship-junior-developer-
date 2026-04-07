@@ -132,17 +132,17 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
       const outcomes =
         marketIds.length > 0
           ? await db
-              .select({
-                id: marketOutcomesTable.id,
-                marketId: marketOutcomesTable.marketId,
-                title: marketOutcomesTable.title,
-                position: marketOutcomesTable.position,
-                totalBets: sum(betsTable.amount),
-              })
-              .from(marketOutcomesTable)
-              .leftJoin(betsTable, eq(betsTable.outcomeId, marketOutcomesTable.id))
-              .where(inArray(marketOutcomesTable.marketId, marketIds))
-              .groupBy(marketOutcomesTable.id)
+            .select({
+              id: marketOutcomesTable.id,
+              marketId: marketOutcomesTable.marketId,
+              title: marketOutcomesTable.title,
+              position: marketOutcomesTable.position,
+              totalBets: sum(betsTable.amount),
+            })
+            .from(marketOutcomesTable)
+            .leftJoin(betsTable, eq(betsTable.outcomeId, marketOutcomesTable.id))
+            .where(inArray(marketOutcomesTable.marketId, marketIds))
+            .groupBy(marketOutcomesTable.id)
           : [];
 
       const [totalRes] = await db
@@ -336,6 +336,12 @@ export const marketRoutes = new Elysia({ prefix: "/api/markets" })
         return { errors: ["internal server error"] };
       }
       assertUser(user);
+
+
+      if (user.role === "admin") {
+        set.status = 400;
+        return { errors: ["admins are not allowed to place bets"] };
+      }
 
       const { outcomeId, amount } = body;
       const marketId = params.id;

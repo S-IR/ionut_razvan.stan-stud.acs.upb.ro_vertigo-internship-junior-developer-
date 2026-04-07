@@ -305,11 +305,11 @@ function RouteComponent() {
                 <span className="font-medium">
                   {resolvedBets.length > 0
                     ? `${Math.round(
-                        (resolvedBets.filter((b) => b.market.resolvedOutcomeId === b.outcome.id)
-                          .length /
-                          resolvedBets.length) *
-                          100,
-                      )}%`
+                      (resolvedBets.filter((b) => b.market.resolvedOutcomeId === b.outcome.id)
+                        .length /
+                        resolvedBets.length) *
+                      100,
+                    )}%`
                     : "N/A"}
                 </span>
               </div>
